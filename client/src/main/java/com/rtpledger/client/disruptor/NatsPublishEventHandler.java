@@ -3,7 +3,7 @@ package com.rtpledger.client.disruptor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lmax.disruptor.EventHandler;
 import com.rtpledger.client.config.RtpClientProperties;
-import com.rtpledger.client.nats.NatsPublishPayload;
+import com.rtpledger.shared.message.LedgerPostingMessage;
 import io.nats.client.Connection;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +23,7 @@ public class NatsPublishEventHandler implements EventHandler<TransactionEvent> {
         try {
             String prefix = properties.getNats().getSubjectPrefix();
             String subject = prefix + "." + event.getRegion() + "." + event.getAccountId();
-            NatsPublishPayload payload = new NatsPublishPayload(
+            LedgerPostingMessage payload = new LedgerPostingMessage(
                     event.getCorrelationId(),
                     event.getTransaction(),
                     event.getRegion(),

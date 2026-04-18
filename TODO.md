@@ -1,7 +1,7 @@
 # TODO.md — RTP Ledger Checkpoint Tracker
 
 ## Current Checkpoint
-**CP-03: Server Module (NATS → Disruptor → Chronicle → Reply)**
+**CP-04: Queue Drainer (Chronicle Queue → CockroachDB)**
 Status: 🔲 NOT STARTED
 
 ---
@@ -67,18 +67,17 @@ This is a query path — not on the Disruptor hot path — so blocking is accept
 ### CP-03 — Server Module (NATS → Disruptor → Chronicle → Reply)
 **Goal**: Server receives NATS message, computes balance, appends to queue, replies. Also handles balance queries.
 **Deliverables**:
-- [ ] `server/pom.xml`
-- [ ] `NatsSubscriber.java`
-  - Subscribes `ledger.>` — pushes to Disruptor (transaction path)
-  - Subscribes `ledger.balance.>` — reads Chronicle Map and replies inline (query path, not on Disruptor)
-- [ ] `ServerDisruptorConfig.java`
-- [ ] `LedgerEventHandler.java` (Chronicle Map compute + Chronicle Queue append + NATS reply)
-- [ ] `ChronicleBalanceEngine.java` (off-heap balance compute + balance read method)
-- [ ] `ChronicleQueueAppender.java` (append LedgerEntry to queue)
-- [ ] `ServerNatsConfig.java`
-- [ ] `application.yml` (server)
+- [x] `server/pom.xml`
+- [x] `NatsSubscriber.java`
+  - Subscribes `ledger.>` — routes 3-token subjects to Disruptor (transaction path); 4-token `ledger.balance.*.*` inline (query path, not on Disruptor)
+- [x] `ServerDisruptorConfig.java`
+- [x] `LedgerEventHandler.java` (Chronicle Map compute + Chronicle Queue append + NATS reply)
+- [x] `ChronicleBalanceEngine.java` (off-heap balance compute + balance read method)
+- [x] `ChronicleQueueAppender.java` (append LedgerEntry to queue)
+- [x] `ServerNatsConfig.java`
+- [x] `application.yml` (server)
 
-**STOP GATE**: Server replies to NATS with ledgerEntryId + currentBalance. Balance query returns Chronicle Map value within 2ms → PROCEED to CP-04
+**STOP GATE**: Server replies to NATS with ledgerEntryId + currentBalance when `replyTo` is set; balance query returns Chronicle Map value (full stack + NATS required) → PROCEED to CP-04
 
 ---
 
@@ -231,3 +230,4 @@ and watch live transactions in Grafana within 5 minutes → PROTOTYPE COMPLETE �
 ## Completed Checkpoints
 - **CP-01** — Project scaffold, shared models, Spring Boot + Lombok POM baseline (compile verified)
 - **CP-02** — Spring Boot client: HTTP → Disruptor → NATS publish; balance via NATS request (`mvn compile` verified; STOP GATE with K6 when infra is up)
+- **CP-03** — Spring Boot server: NATS `ledger.>` routing, Disruptor → Chronicle Map + Chronicle Queue, inline balance reads (`mvn compile` verified)

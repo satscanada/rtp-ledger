@@ -1,0 +1,28 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: rtp-server
+
+rtp:
+  server:
+    disruptor:
+      ring-buffer-size: 65536
+      thread-name: rtp-server-disruptor
+    nats:
+      servers: nats://localhost:4222
+      connection-timeout-ms: 5000
+    chronicle:
+      map-path: ${user.dir}/var/chronicle/map
+      queue-path: ${user.dir}/var/chronicle/queue
+    drainer:
+      batch-size: 500
+      flush-interval-ms: 50
+      server-id: ${HOSTNAME:server-default}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus

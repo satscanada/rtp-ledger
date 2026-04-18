@@ -1,8 +1,11 @@
-package com.rtpledger.client.nats;
+package com.rtpledger.shared.message;
 
 import com.rtpledger.shared.model.BianCreditTransferTransaction;
 
-public record NatsPublishPayload(
+/**
+ * NATS payload for {@code ledger.{region}.{accountId}} (client publish → server ingest).
+ */
+public record LedgerPostingMessage(
         String correlationId,
         BianCreditTransferTransaction transaction,
         String region,
