@@ -1,7 +1,7 @@
 # TODO.md — RTP Ledger Checkpoint Tracker
 
 ## Current Checkpoint
-**CP-04: Queue Drainer (Chronicle Queue → CockroachDB)**
+**CP-05: Infra (Docker Compose + DB DDL)**
 Status: 🔲 NOT STARTED
 
 ---
@@ -84,13 +84,13 @@ This is a query path — not on the Disruptor hot path — so blocking is accept
 ### CP-04 — Queue Drainer (Chronicle Queue → CockroachDB)
 **Goal**: Background drainer with hybrid flush + tail pointer recovery
 **Deliverables**:
-- [ ] `QueueDrainer.java` (hybrid: 500 records OR 50ms)
-- [ ] `TailPointerRepository.java` (read/write chronicle_index)
-- [ ] `LedgerEntryRepository.java` (JDBC batch insert)
-- [ ] `LedgerBalanceRepository.java` (upsert)
-- [ ] Recovery logic on `@PostConstruct` (seek to last committed tail pointer on restart)
+- [x] `QueueDrainer.java` (hybrid: 500 records OR 50ms)
+- [x] `TailPointerRepository.java` (read/write chronicle_index)
+- [x] `LedgerEntryRepository.java` (JDBC batch insert)
+- [x] `LedgerBalanceRepository.java` (upsert)
+- [x] Recovery logic on `@PostConstruct` (seek to last committed tail pointer on restart)
 
-**STOP GATE**: Drainer bulk-inserts to CockroachDB. Kill server, restart → tail pointer recovery replays correctly → PROCEED to CP-05
+**STOP GATE**: Drainer bulk-inserts to CockroachDB. Kill server, restart → tail pointer recovery replays correctly → PROCEED to CP-05 (requires schema `infra/db/V1__init.sql` + `CRDB_URL`)
 
 ---
 
@@ -231,3 +231,4 @@ and watch live transactions in Grafana within 5 minutes → PROTOTYPE COMPLETE �
 - **CP-01** — Project scaffold, shared models, Spring Boot + Lombok POM baseline (compile verified)
 - **CP-02** — Spring Boot client: HTTP → Disruptor → NATS publish; balance via NATS request (`mvn compile` verified; STOP GATE with K6 when infra is up)
 - **CP-03** — Spring Boot server: NATS `ledger.>` routing, Disruptor → Chronicle Map + Chronicle Queue, inline balance reads (`mvn compile` verified)
+- **CP-04** — JDBC drainer thread: hybrid batch flush + tail pointer + `infra/db/V1__init.sql` reference DDL (`mvn compile` verified)

@@ -4,6 +4,13 @@ server:
 spring:
   application:
     name: rtp-server
+  datasource:
+    url: ${CRDB_URL:jdbc:postgresql://127.0.0.1:26257/defaultdb?sslmode=disable&reWriteBatchedInserts=true}
+    username: ${CRDB_USER:root}
+    password: ${CRDB_PASSWORD:}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
 
 rtp:
   server:
