@@ -1,0 +1,13 @@
+.git
+.idea
+# Keep fat JARs at module/target/*.jar for infra/docker/Dockerfile (runtime-only build).
+**/target/classes
+**/target/test-classes
+**/target/maven-archiver
+**/target/maven-status
+**/target/surefire-reports
+**/target/generated-sources
+**/target/generated-test-sources
+**/var
+**/.DS_Store
+*.iml

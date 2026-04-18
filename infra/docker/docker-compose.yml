@@ -1,0 +1,172 @@
+name: rtp-ledger
+
+networks:
+  rtp:
+    driver: bridge
+
+volumes:
+  nats_data:
+  chronicle_map:
+  chronicle_queue:
+
+services:
+  nats:
+    image: nats:2.10-alpine
+    container_name: rtp-nats
+    command: ["-c", "/etc/nats/nats.conf"]
+    ports:
+      - "4222:4222" # NATS client (TCP)
+      - "8222:8222" # HTTP monitoring (/varz, /connz, /healthz, …)
+      - "9222:9222" # WebSocket (e.g. ws://localhost:9222)
+    volumes:
+      - ./nats.conf:/etc/nats/nats.conf:ro
+      - nats_data:/data
+    networks: [rtp]
+    restart: unless-stopped
+
+  # Same image as gastbob40/nats-ui docker-compose; published on 3010 to leave 3000 for Grafana.
+  nats-ui:
+    image: ghcr.io/gastbob40/nats-ui:latest
+    container_name: rtp-nats-ui
+    ports:
+      - "3010:3000"
+    depends_on:
+      - nats
+    networks: [rtp]
+    restart: unless-stopped
+
+  nats-surveyor:
+    image: natsio/nats-surveyor:latest
+    container_name: rtp-nats-surveyor
+    command: ["-s", "nats://nats:4222"]
+    ports:
+      - "7777:7777"
+    depends_on:
+      - nats
+    networks: [rtp]
+    restart: unless-stopped
+
+  cockroach:
+    image: cockroachdb/cockroach:v23.2.0
+    container_name: rtp-cockroach
+    # Bypass cockroach.sh: it rejects --listen-addr=0.0.0.0 for start-single-node (see cockroachdb/cockroach#84166).
+    entrypoint: ["/cockroach/cockroach"]
+    command:
+      - start-single-node
+      - --insecure
+      - --listen-addr=0.0.0.0:26257
+      - --http-addr=0.0.0.0:8080
+      - --advertise-addr=cockroach:26257
+    ports:
+      - "26257:26257"
+      # Admin UI: host 28080 so 8080 stays free for rtp-client HTTP API.
+      - "28080:8080"
+    networks: [rtp]
+    healthcheck:
+      test: ["CMD-SHELL", "/cockroach/cockroach sql --insecure -e 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+  crdb-init:
+    image: cockroachdb/cockroach:v23.2.0
+    container_name: rtp-crdb-init
+    depends_on:
+      cockroach:
+        condition: service_healthy
+    volumes:
+      - ../db:/ddl:ro
+      - ../crdb-init/init.sh:/init.sh:ro
+    entrypoint: ["/bin/sh", "/init.sh"]
+    environment:
+      COCKROACH_HOST: cockroach
+    networks: [rtp]
+    restart: "no"
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: rtp-prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    ports:
+      # Host 9091 if 9090 is already taken (e.g. another stack); Grafana uses http://prometheus:9090 inside the network.
+      - "9091:9090"
+    volumes:
+      - ../prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks: [rtp]
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: rtp-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - ../grafana/provisioning:/etc/grafana/provisioning
+      - ../grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - prometheus
+    networks: [rtp]
+    restart: unless-stopped
+
+  rtp-client:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile
+      args:
+        MODULE: client
+    image: rtp-ledger/rtp-client:latest
+    container_name: rtp-client
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_APPLICATION_JSON: '{"rtp":{"client":{"nats":{"servers":"nats://nats:4222"}}}}'
+    depends_on:
+      - nats
+    networks: [rtp]
+    restart: unless-stopped
+
+  rtp-server:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile
+      args:
+        MODULE: server
+    image: rtp-ledger/rtp-server:latest
+    container_name: rtp-server
+    ports:
+      - "8081:8081"
+    environment:
+      CRDB_URL: jdbc:postgresql://cockroach:26257/defaultdb?sslmode=disable
+      SPRING_APPLICATION_JSON: '{"rtp":{"server":{"chronicle":{"map-path":"/data/chronicle/map","queue-path":"/data/chronicle/queue"}}}}'
+    volumes:
+      - chronicle_map:/data/chronicle/map
+      - chronicle_queue:/data/chronicle/queue
+    depends_on:
+      nats:
+        condition: service_started
+      cockroach:
+        condition: service_healthy
+      crdb-init:
+        condition: service_completed_successfully
+    networks: [rtp]
+    restart: unless-stopped
+
+  rtp-simulator:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile
+      args:
+        MODULE: simulator
+    image: rtp-ledger/rtp-simulator:latest
+    container_name: rtp-simulator
+    ports:
+      - "8082:8082"
+    depends_on:
+      - rtp-client
+    networks: [rtp]
+    restart: unless-stopped

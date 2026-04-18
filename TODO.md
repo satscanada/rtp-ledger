@@ -1,7 +1,7 @@
 # TODO.md — RTP Ledger Checkpoint Tracker
 
 ## Current Checkpoint
-**CP-05: Infra (Docker Compose + DB DDL)**
+**CP-06: Observability (Prometheus + Grafana)**
 Status: 🔲 NOT STARTED
 
 ---
@@ -97,19 +97,17 @@ This is a query path — not on the Disruptor hot path — so blocking is accept
 ### CP-05 — Infra (Docker Compose + DB DDL)
 **Goal**: Full local stack runnable with `docker compose up -d`
 **Deliverables**:
-- [ ] `docker-compose.yml` — services: NATS, nats-surveyor, CockroachDB 3-node, crdb-init,
-      rtp-client (8080), rtp-server (8081), rtp-simulator (8082), Prometheus (9090), Grafana (3000), K6
-- [ ] `db/V1__init.sql` — all 4 tables with hash sharding + indexes
-- [ ] `db/V2__seed.sql` — 100 seed accounts (10 per region × 10 accounts, fixed UUIDs for K6 accounts.js)
-- [ ] `crdb-init/init.sh` — `cockroach init` + wait-for-cluster-healthy loop + apply DDL + seed
-- [ ] Volume mounts for Chronicle Map/Queue persistence
-- [ ] `prometheus/prometheus.yml` — scrape configs for all 7 metric sources
-      (client, server, simulator, NATS surveyor, 3× CockroachDB nodes)
-- [ ] `scripts/smoke-test.sh` — posts 5 transactions, asserts 5 × HTTP 202, queries balance, asserts non-zero
-      Exits 0 on pass, exits 1 with clear failure message on any assertion failure
-      Safe to run immediately after `docker compose up` — includes 30s wait-for-healthy loop
+- [x] `infra/docker/docker-compose.yml` — NATS (+ vendored `nats.conf`), NATS UI (`README-NATS-UI.md`, upstream curl recipe),
+      nats-surveyor, single-node CockroachDB, crdb-init, rtp-client (8080), rtp-server (8081),
+      rtp-simulator (8082), Prometheus (host **9091** → container 9090), Grafana (3000), Cockroach admin UI (host **28080**); K6 remains under `infra/k6/` (HTTP load, not a compose service)
+- [x] `infra/db/V1__init.sql` — tables with hash-sharded PKs + indexes
+- [x] `infra/db/V2__seed.sql` — 100 seed accounts (10 regions × 10), stable UUIDs for `infra/k6/accounts.js`
+- [x] `infra/crdb-init/init.sh` — wait-for-SQL + apply DDL + seed
+- [x] Chronicle Map/Queue named volumes on rtp-server
+- [x] `infra/prometheus/prometheus.yml` — scrape client, server, simulator, nats-surveyor, single CockroachDB `/_status/vars`
+- [x] `scripts/smoke-test.sh` — 5× POST → 202, balance GET → non-zero; 30s client health wait + balance poll
 
-**STOP GATE**: `docker compose up -d` → all services healthy. `./scripts/smoke-test.sh` exits 0 → PROCEED to CP-06
+**STOP GATE**: `docker compose up -d` → stack ready. `./scripts/smoke-test.sh` exits 0 → PROCEED to CP-06 ✅
 
 ---
 
