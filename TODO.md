@@ -1,8 +1,8 @@
 # TODO.md — RTP Ledger Checkpoint Tracker
 
 ## Current Checkpoint
-**CP-01: Project Scaffold & Shared Models**
-Status: 🟡 IN PROGRESS (pending manual `mvn compile` confirmation)
+**CP-03: Server Module (NATS → Disruptor → Chronicle → Reply)**
+Status: 🔲 NOT STARTED
 
 ---
 
@@ -17,19 +17,19 @@ All checkpoint work should preserve architecture constraints while using Lombok 
 ### CP-01 — Project Scaffold & Shared Models
 **Goal**: Maven multi-module parent POM, shared module with all BIAN/domain models, Lombok-enabled coding baseline
 **Deliverables**:
-- [ ] `pom.xml` (parent, multi-module: shared, client, server, simulator)
-- [ ] Parent/module POMs include Lombok dependency and annotation processing configuration
-- [ ] `shared/pom.xml`
-- [ ] `BianCreditTransferTransaction.java` (full BIAN-inspired payload)
-- [ ] `LedgerEntry.java`
-- [ ] `LedgerBalance.java`
-- [ ] `Account.java`
-- [ ] `LedgerPostingResponse.java` (correlationId + status)
-- [ ] `BalanceResponse.java` (accountId + balance + currency + asOf)
-- [ ] `NatsReply.java` (correlationId + ledgerEntryId + currentBalance)
-- [ ] Shared model style aligned with Lombok-first conventions from `CLAUDE.md` and `.github/copilot-instructions.md`
+- [x] `pom.xml` (Spring Boot parent + multi-module: shared, client, server, simulator)
+- [x] Parent/module POMs include Lombok dependency and annotation processing configuration
+- [x] `shared/pom.xml` includes Spring Boot dependency baseline for shared models
+- [x] `BianCreditTransferTransaction.java` (full BIAN-inspired payload)
+- [x] `LedgerEntry.java`
+- [x] `LedgerBalance.java`
+- [x] `Account.java`
+- [x] `LedgerPostingResponse.java` (correlationId + status)
+- [x] `BalanceResponse.java` (accountId + balance + currency + asOf)
+- [x] `NatsReply.java` (correlationId + ledgerEntryId + currentBalance)
+- [x] Shared model style aligned with Lombok-first conventions from `CLAUDE.md` and `.github/copilot-instructions.md`
 
-**STOP GATE**: All shared models compile cleanly with `mvn compile` → PROCEED to CP-02
+**STOP GATE**: All shared models compile cleanly with `mvn compile` → PROCEED to CP-02 ✅
 
 ---
 
@@ -44,17 +44,17 @@ All checkpoint work should preserve architecture constraints while using Lombok 
 ### CP-02 — Client Module (HTTP → Disruptor → NATS)
 **Goal**: Working Spring Boot client — accepts BIAN payload, returns correlation ID, exposes live balance read
 **Deliverables**:
-- [ ] `client/pom.xml`
-- [ ] `LedgerPostingController.java`
+- [x] `client/pom.xml`
+- [x] `LedgerPostingController.java`
   - `POST /api/v1/ledger/{region}/{accountId}/post` → `{correlationId, status: ACCEPTED}`
   - `GET  /api/v1/ledger/{region}/{accountId}/balance` → live balance from Chronicle Map via NATS request to server (NOT CockroachDB)
-- [ ] `BianTransactionValidator.java` (all 8 validation rules from client.instructions.md)
-- [ ] `TransactionDisruptorConfig.java` (ring buffer 65536, single producer)
-- [ ] `TransactionEvent.java` (Disruptor event wrapper)
-- [ ] `NatsPublishEventHandler.java` (publishes to `ledger.{region}.{accountId}`)
-- [ ] `BalanceQueryHandler.java` (NATS request to `ledger.balance.{region}.{accountId}`, 500ms timeout)
-- [ ] `ClientNatsConfig.java`
-- [ ] `application.yml` (client)
+- [x] `BianTransactionValidator.java` (all 8 validation rules from client.instructions.md)
+- [x] `TransactionDisruptorConfig.java` (ring buffer 65536, single producer)
+- [x] `TransactionEvent.java` (Disruptor event wrapper)
+- [x] `NatsPublishEventHandler.java` (publishes to `ledger.{region}.{accountId}`)
+- [x] `BalanceQueryHandler.java` (NATS request to `ledger.balance.{region}.{accountId}`, 500ms timeout)
+- [x] `ClientNatsConfig.java`
+- [x] `application.yml` (client)
 
 **Balance endpoint design note**: The GET balance makes a synchronous NATS request to the server on subject
 `ledger.balance.{region}.{accountId}`. Server reads Chronicle Map and replies immediately.
@@ -229,4 +229,5 @@ and watch live transactions in Grafana within 5 minutes → PROTOTYPE COMPLETE �
 ---
 
 ## Completed Checkpoints
-_(none yet)_
+- **CP-01** — Project scaffold, shared models, Spring Boot + Lombok POM baseline (compile verified)
+- **CP-02** — Spring Boot client: HTTP → Disruptor → NATS publish; balance via NATS request (`mvn compile` verified; STOP GATE with K6 when infra is up)

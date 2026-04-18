@@ -1,0 +1,23 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: rtp-client
+
+rtp:
+  client:
+    disruptor:
+      ring-buffer-size: 65536
+      thread-name: rtp-client-disruptor
+    nats:
+      servers: nats://localhost:4222
+      connection-timeout-ms: 5000
+      subject-prefix: ledger
+      balance-request-timeout-ms: 500
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus
