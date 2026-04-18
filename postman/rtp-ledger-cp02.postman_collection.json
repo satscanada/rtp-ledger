@@ -1,7 +1,7 @@
 {
 	"info": {
 		"_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-		"name": "RTP Ledger — CP-02 Client",
+		"name": "RTP Ledger",
 		"description": "Tests the rtp-client Spring Boot module: POST ledger posting (Disruptor → NATS) and GET balance (NATS request to server).\n\n**Prerequisites:** Client running on `baseUrl` (Docker Compose default http://localhost:18080; local `mvn spring-boot:run` default http://localhost:8080). For GET balance to return 200, the CP-03 server must be running and subscribed to `ledger.balance.>`. NATS must be reachable at `rtp.client.nats.servers` in application.yml.\n\n**Path `accountId`:** Publish subject is `ledger.{region}.{accountId}`; use the same id as in your test scenario (often the credited account UUID).",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
@@ -16,105 +16,256 @@
 		},
 		{
 			"key": "accountId",
-			"value": "11111111-1111-1111-1111-111111111111",
-			"description": "Path segment for POST/GET; also used as the publish key for NATS subject ledger.{region}.{accountId}"
+			"value": "b7592f32-d833-52f5-83c4-1c2f367e52ab",
+			"description": "Seeded account (ACC-ca-east-00) used as POST path account and live balance lookup account"
 		},
 		{
 			"key": "debtorAccountOther",
-			"value": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+			"value": "cfd7162e-d0d5-5381-829d-aae67da1d872",
+			"description": "Seeded counterparty account (ACC-ca-west-00)"
 		},
 		{
 			"key": "creditorAccountOther",
-			"value": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+			"value": "b7592f32-d833-52f5-83c4-1c2f367e52ab",
+			"description": "Seeded credited account (ACC-ca-east-00). Keep aligned with accountId for demo consistency."
+		},
+		{
+			"key": "simulatorBaseUrl",
+			"value": "http://localhost:8082"
 		}
 	],
 	"item": [
 		{
-			"name": "POST Posting — valid (expect 202)",
-			"request": {
-				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n  \"messageId\": \"msg-cp02-001\",\n  \"creationDateTime\": \"2026-04-18T12:00:00Z\",\n  \"numberOfTransactions\": \"1\",\n  \"totalInterbankSettlementAmount\": \"10.50\",\n  \"interbankSettlementCurrency\": \"CAD\",\n  \"paymentInformationId\": \"pay-cp02-001\",\n  \"paymentMethod\": \"TRF\",\n  \"instructionPriority\": \"NORM\",\n  \"requestedExecutionDate\": \"2026-04-18\",\n  \"debtor\": null,\n  \"debtorAccount\": {\n    \"iban\": null,\n    \"other\": \"{{debtorAccountOther}}\",\n    \"currency\": \"CAD\"\n  },\n  \"debtorAgent\": null,\n  \"creditor\": null,\n  \"creditorAccount\": {\n    \"iban\": null,\n    \"other\": \"{{creditorAccountOther}}\",\n    \"currency\": \"CAD\"\n  },\n  \"creditorAgent\": null,\n  \"creditTransferTransactionInformation\": {\n    \"instructionId\": \"instr-cp02-001\",\n    \"endToEndId\": \"e2e-cp02-001\",\n    \"transactionId\": \"txn-cp02-001\",\n    \"paymentTypeInformation\": \"RTP\",\n    \"instructedAmount\": \"10.50\",\n    \"instructedCurrency\": \"CAD\",\n    \"chargeBearer\": \"DEBT\",\n    \"remittanceInformation\": {\n      \"unstructured\": \"CP-02 Postman test\",\n      \"reference\": \"REF-1\"\n    },\n    \"valueDate\": \"2026-04-18\",\n    \"localInstrument\": \"RTP\"\n  }\n}\n"
+			"name": "Client",
+			"description": "CP-02 client requests.",
+			"item": [
+				{
+					"name": "POST Posting — valid (expect 202)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"messageId\": \"msg-cp02-001\",\n  \"creationDateTime\": \"2026-04-18T12:00:00Z\",\n  \"numberOfTransactions\": \"1\",\n  \"totalInterbankSettlementAmount\": \"10.50\",\n  \"interbankSettlementCurrency\": \"CAD\",\n  \"paymentInformationId\": \"pay-cp02-001\",\n  \"paymentMethod\": \"TRF\",\n  \"instructionPriority\": \"NORM\",\n  \"requestedExecutionDate\": \"2026-04-18\",\n  \"debtor\": null,\n  \"debtorAccount\": {\n    \"iban\": null,\n    \"other\": \"{{debtorAccountOther}}\",\n    \"currency\": \"CAD\"\n  },\n  \"debtorAgent\": null,\n  \"creditor\": null,\n  \"creditorAccount\": {\n    \"iban\": null,\n    \"other\": \"{{creditorAccountOther}}\",\n    \"currency\": \"CAD\"\n  },\n  \"creditorAgent\": null,\n  \"creditTransferTransactionInformation\": {\n    \"instructionId\": \"instr-cp02-001\",\n    \"endToEndId\": \"e2e-cp02-001\",\n    \"transactionId\": \"txn-cp02-001\",\n    \"paymentTypeInformation\": \"RTP\",\n    \"instructedAmount\": \"10.50\",\n    \"instructedCurrency\": \"CAD\",\n    \"chargeBearer\": \"DEBT\",\n    \"remittanceInformation\": {\n      \"unstructured\": \"CP-02 Postman test\",\n      \"reference\": \"REF-1\"\n    },\n    \"valueDate\": \"2026-04-18\",\n    \"localInstrument\": \"RTP\"\n  }\n}\n"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/ledger/{{region}}/{{accountId}}/post",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"ledger",
+								"{{region}}",
+								"{{accountId}}",
+								"post"
+							]
+						},
+						"description": "Passes `BianTransactionValidator` (8 rules). Response **202** with `status: ACCEPTED` when the Disruptor accepts the event. If the ring buffer is full, response is **503** with `status: OVERLOADED`.\n\nDuplicate runs: change `messageId`, `paymentInformationId`, or `endToEndId` if you need unique business keys."
+					},
+					"response": []
 				},
-				"url": {
-					"raw": "{{baseUrl}}/api/v1/ledger/{{region}}/{{accountId}}/post",
-					"host": [
-						"{{baseUrl}}"
-					],
-					"path": [
-						"api",
-						"v1",
-						"ledger",
-						"{{region}}",
-						"{{accountId}}",
-						"post"
-					]
+				{
+					"name": "POST Posting — validation error (expect 400)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"messageId\": \"msg-invalid\",\n  \"creationDateTime\": \"2026-04-18T12:00:00Z\",\n  \"numberOfTransactions\": \"1\",\n  \"totalInterbankSettlementAmount\": \"0.00\",\n  \"interbankSettlementCurrency\": \"CAD\",\n  \"paymentInformationId\": \"\",\n  \"paymentMethod\": \"TRF\",\n  \"instructionPriority\": \"NORM\",\n  \"requestedExecutionDate\": \"2026-04-18\",\n  \"debtorAccount\": { \"other\": \"{{debtorAccountOther}}\", \"currency\": \"CAD\" },\n  \"creditorAccount\": { \"other\": \"{{debtorAccountOther}}\", \"currency\": \"CAD\" },\n  \"creditTransferTransactionInformation\": {\n    \"instructionId\": \"instr-1\",\n    \"endToEndId\": \"\",\n    \"transactionId\": \"txn-1\",\n    \"paymentTypeInformation\": \"RTP\",\n    \"instructedAmount\": \"-1.00\",\n    \"instructedCurrency\": \"XX\",\n    \"chargeBearer\": \"DEBT\",\n    \"remittanceInformation\": null,\n    \"valueDate\": \"2026-04-18\",\n    \"localInstrument\": \"\"\n  }\n}\n"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/ledger/{{region}}/{{accountId}}/post",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"ledger",
+								"{{region}}",
+								"{{accountId}}",
+								"post"
+							]
+						},
+						"description": "Intentionally violates multiple rules (blank endToEndId, non-positive amount, invalid currency, self-transfer, blank paymentInformationId, null localInstrument). Expect **400** with `status: REJECTED` and an `errors` array."
+					},
+					"response": []
 				},
-				"description": "Passes `BianTransactionValidator` (8 rules). Response **202** with `status: ACCEPTED` when the Disruptor accepts the event. If the ring buffer is full, response is **503** with `status: OVERLOADED`.\n\nDuplicate runs: change `messageId`, `paymentInformationId`, or `endToEndId` if you need unique business keys."
-			},
-			"response": []
+				{
+					"name": "GET Balance (expect 200 when server up)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/ledger/{{region}}/{{accountId}}/balance",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"ledger",
+								"{{region}}",
+								"{{accountId}}",
+								"balance"
+							]
+						},
+						"description": "Synchronous NATS request to subject `ledger.balance.{region}.{accountId}` (500 ms timeout). Without CP-03 server + NATS, expect **504** Gateway Timeout or **502** from the client. With server replying JSON matching `BalanceResponse`, expect **200**."
+					},
+					"response": []
+				},
+				{
+					"name": "GET Client Health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/actuator/health",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"actuator",
+								"health"
+							]
+						},
+						"description": "Client service health endpoint. Expect 200 with `{\"status\":\"UP\"}` when the client is running."
+					},
+					"response": []
+				}
+			]
 		},
 		{
-			"name": "POST Posting — validation error (expect 400)",
-			"request": {
-				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n  \"messageId\": \"msg-invalid\",\n  \"creationDateTime\": \"2026-04-18T12:00:00Z\",\n  \"numberOfTransactions\": \"1\",\n  \"totalInterbankSettlementAmount\": \"0.00\",\n  \"interbankSettlementCurrency\": \"CAD\",\n  \"paymentInformationId\": \"\",\n  \"paymentMethod\": \"TRF\",\n  \"instructionPriority\": \"NORM\",\n  \"requestedExecutionDate\": \"2026-04-18\",\n  \"debtorAccount\": { \"other\": \"{{debtorAccountOther}}\", \"currency\": \"CAD\" },\n  \"creditorAccount\": { \"other\": \"{{debtorAccountOther}}\", \"currency\": \"CAD\" },\n  \"creditTransferTransactionInformation\": {\n    \"instructionId\": \"instr-1\",\n    \"endToEndId\": \"\",\n    \"transactionId\": \"txn-1\",\n    \"paymentTypeInformation\": \"RTP\",\n    \"instructedAmount\": \"-1.00\",\n    \"instructedCurrency\": \"XX\",\n    \"chargeBearer\": \"DEBT\",\n    \"remittanceInformation\": null,\n    \"valueDate\": \"2026-04-18\",\n    \"localInstrument\": \"\"\n  }\n}\n"
+			"name": "Simulator",
+			"description": "CP-07 simulator trigger requests.",
+			"item": [
+				{
+					"name": "POST Start Apple Pay Burst",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{simulatorBaseUrl}}/simulate/apple-pay-burst",
+							"host": [
+								"{{simulatorBaseUrl}}"
+							],
+							"path": [
+								"simulate",
+								"apple-pay-burst"
+							]
+						},
+						"description": "Starts the Apple Pay burst simulation (500 micro-transactions in 2s, 3s lull, repeated 3 times)."
+					},
+					"response": []
 				},
-				"url": {
-					"raw": "{{baseUrl}}/api/v1/ledger/{{region}}/{{accountId}}/post",
-					"host": [
-						"{{baseUrl}}"
-					],
-					"path": [
-						"api",
-						"v1",
-						"ledger",
-						"{{region}}",
-						"{{accountId}}",
-						"post"
-					]
+				{
+					"name": "POST Start Google Pay Mixed",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{simulatorBaseUrl}}/simulate/google-pay-mixed",
+							"host": [
+								"{{simulatorBaseUrl}}"
+							],
+							"path": [
+								"simulate",
+								"google-pay-mixed"
+							]
+						},
+						"description": "Starts the 60-second mixed scenario (200 virtual users across 10 accounts)."
+					},
+					"response": []
 				},
-				"description": "Intentionally violates multiple rules (blank endToEndId, non-positive amount, invalid currency, self-transfer, blank paymentInformationId, null localInstrument). Expect **400** with `status: REJECTED` and an `errors` array."
-			},
-			"response": []
-		},
-		{
-			"name": "GET Balance (expect 200 when server up)",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "{{baseUrl}}/api/v1/ledger/{{region}}/{{accountId}}/balance",
-					"host": [
-						"{{baseUrl}}"
-					],
-					"path": [
-						"api",
-						"v1",
-						"ledger",
-						"{{region}}",
-						"{{accountId}}",
-						"balance"
-					]
+				{
+					"name": "POST Start Single Account Drain",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{simulatorBaseUrl}}/simulate/single-account-drain",
+							"host": [
+								"{{simulatorBaseUrl}}"
+							],
+							"path": [
+								"simulate",
+								"single-account-drain"
+							]
+						},
+						"description": "Starts 1000 sequential transactions on one account and verifies final balance."
+					},
+					"response": []
 				},
-				"description": "Synchronous NATS request to subject `ledger.balance.{region}.{accountId}` (500 ms timeout). Without CP-03 server + NATS, expect **504** Gateway Timeout or **502** from the client. With server replying JSON matching `BalanceResponse`, expect **200**."
-			},
-			"response": []
+				{
+					"name": "GET Simulator Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{simulatorBaseUrl}}/simulate/status",
+							"host": [
+								"{{simulatorBaseUrl}}"
+							],
+							"path": [
+								"simulate",
+								"status"
+							]
+						},
+						"description": "Returns active scenario, TPS, elapsed time, and success/failure counters."
+					},
+					"response": []
+				},
+				{
+					"name": "GET Simulator Events (SSE)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{simulatorBaseUrl}}/simulate/events",
+							"host": [
+								"{{simulatorBaseUrl}}"
+							],
+							"path": [
+								"simulate",
+								"events"
+							]
+						},
+						"description": "Subscribes to live simulator events using SSE. Keep request open to watch updates."
+					},
+					"response": []
+				},
+				{
+					"name": "GET Simulator Health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{simulatorBaseUrl}}/actuator/health",
+							"host": [
+								"{{simulatorBaseUrl}}"
+							],
+							"path": [
+								"actuator",
+								"health"
+							]
+						},
+						"description": "Simulator service health endpoint. Expect 200 with `{\"status\":\"UP\"}` when simulator is running."
+					},
+					"response": []
+				}
+			]
 		}
 	]
 }

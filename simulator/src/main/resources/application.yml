@@ -5,6 +5,18 @@ spring:
   application:
     name: rtp-simulator
 
+rtp:
+  simulator:
+    client-base-url: ${RTP_CLIENT_BASE_URL:http://localhost:18080}
+    region: ${RTP_SIMULATOR_REGION:ca-east}
+    hot-account-id: ${RTP_SIMULATOR_HOT_ACCOUNT_ID:b7592f32-d833-52f5-83c4-1c2f367e52ab}
+    counterparty-account-id: ${RTP_SIMULATOR_COUNTERPARTY_ACCOUNT_ID:cfd7162e-d0d5-5381-829d-aae67da1d872}
+    connect-timeout-ms: ${RTP_SIMULATOR_CONNECT_TIMEOUT_MS:1000}
+    request-timeout-ms: ${RTP_SIMULATOR_REQUEST_TIMEOUT_MS:3000}
+    nats:
+      servers: ${RTP_SIMULATOR_NATS_SERVERS:nats://localhost:4222}
+      connection-timeout-ms: ${RTP_SIMULATOR_NATS_TIMEOUT_MS:5000}
+
 management:
   endpoints:
     web:

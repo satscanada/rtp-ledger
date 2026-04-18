@@ -199,6 +199,9 @@ services:
     container_name: rtp-simulator
     ports:
       - "8082:8082"
+    environment:
+      RTP_CLIENT_BASE_URL: http://rtp-client:8080
+      RTP_SIMULATOR_NATS_SERVERS: nats://nats:4222
     depends_on:
       - rtp-client
     networks: [rtp]
