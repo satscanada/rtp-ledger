@@ -99,4 +99,5 @@ INSERT INTO account (account_id, account_number, account_name, currency, status)
   ('c82c6307-a460-52d2-8680-41560498770a', 'ACC-uk-west-06', 'Seed uk-west 6', 'CAD', 'ACTIVE'),
   ('73c02435-c8e6-5a16-9558-7b8e35ee1edb', 'ACC-uk-west-07', 'Seed uk-west 7', 'CAD', 'ACTIVE'),
   ('4cc20be9-178e-5b34-93a8-bc45b8141e51', 'ACC-uk-west-08', 'Seed uk-west 8', 'CAD', 'ACTIVE'),
-  ('f7716199-bfc8-5245-98fc-69a3d60de815', 'ACC-uk-west-09', 'Seed uk-west 9', 'CAD', 'ACTIVE');
+  ('f7716199-bfc8-5245-98fc-69a3d60de815', 'ACC-uk-west-09', 'Seed uk-west 9', 'CAD', 'ACTIVE')
+ON CONFLICT (account_id) DO NOTHING;

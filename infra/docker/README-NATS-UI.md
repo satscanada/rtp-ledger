@@ -40,6 +40,14 @@ If you prefer a **full in-container Maven build** (needs a working pull of `mave
 docker build -f infra/docker/Dockerfile.maven --build-arg MODULE=client -t rtp-ledger/rtp-client:latest ..
 ```
 
+### NATS Surveyor logs `503 No responders` / statz errors
+
+Surveyor polls **`$SYS.REQ.*`** (statz). That requires a **system account** on the NATS server and a client connection **as a SYS user**. This repo’s `nats.conf` defines **`SYS`** / **`APP`**, **`system_account: SYS`**, **`no_auth_user: rtp`** (passwordless app traffic → account **APP**), and Compose runs Surveyor as **`nats://sys:rtpSysDev01@nats:4222`**. After changing `nats.conf`, recreate **`rtp-nats`** and **`rtp-nats-surveyor`**.
+
+### `rtp-server` crashes on Chronicle / `IllegalAccessException` (java.lang.reflect)
+
+Chronicle Map and Queue need **`--add-opens`** on Java 17+ (JPMS). Compose sets **`JDK_JAVA_OPTIONS`** on **`rtp-server`** (Temurin Alpine mishandles **`JAVA_TOOL_OPTIONS`** with **`--add-opens`**). For a bare `java -jar server.jar`, export the same opens via **`JDK_JAVA_OPTIONS`** or **`JAVA_TOOL_OPTIONS`**, or use **`mvn -pl server spring-boot:run`** (see `server/pom.xml` `jvmArguments`).
+
 ### Proxy timeout (`192.168.65.1:3128`, `DeadlineExceeded`)
 
 Docker Desktop is routing registry traffic through an HTTP proxy that is not responding. Fix **Docker Desktop → Settings → Resources → Proxies** (clear or correct the proxy), or disable VPN/firewall rules blocking Docker. Using **`build-local.sh`** avoids pulling the Maven base image; you still need **`eclipse-temurin:21-jre-alpine`** once unless it is already cached.
@@ -49,8 +57,8 @@ Docker Desktop is routing registry traffic through an HTTP proxy that is not res
 | Service | Host | Notes |
 |--------|------|--------|
 | **NATS** | 4222, **8222**, **9222** | Published on the **Docker host**. See **NATS UI networking** below — do not use the hostname `nats` from your browser. |
-| **rtp-client** | 8080 | HTTP API |
-| CockroachDB Console | **28080** | Maps to container **8080** (8080 on the host is reserved for the client) |
+| **rtp-client** | **18080** | HTTP API → container **8080** (avoids host **8080** clashes) |
+| CockroachDB Console | **28080** | Maps to container **8080** |
 | Prometheus | **9091** | Maps to container **9090** (use **9091** if something else already uses 9090 on the host) |
 | Grafana | 3000 | |
 | NATS UI | 3010 | |

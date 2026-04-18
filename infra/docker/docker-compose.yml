@@ -38,7 +38,8 @@ services:
   nats-surveyor:
     image: natsio/nats-surveyor:latest
     container_name: rtp-nats-surveyor
-    command: ["-s", "nats://nats:4222"]
+    # Must use SYS account credentials so $SYS.REQ statz requests get responders (see nats.conf accounts).
+    command: ["-s", "nats://sys:rtpSysDev01@nats:4222"]
     ports:
       - "7777:7777"
     depends_on:
@@ -59,7 +60,7 @@ services:
       - --advertise-addr=cockroach:26257
     ports:
       - "26257:26257"
-      # Admin UI: host 28080 so 8080 stays free for rtp-client HTTP API.
+      # Admin UI on host 28080 (container 8080).
       - "28080:8080"
     networks: [rtp]
     healthcheck:
@@ -122,7 +123,8 @@ services:
     image: rtp-ledger/rtp-client:latest
     container_name: rtp-client
     ports:
-      - "8080:8080"
+      # Host 18080 → app 8080 (host 8080 is often taken by Docker Desktop / other stacks)
+      - "18080:8080"
     environment:
       SPRING_APPLICATION_JSON: '{"rtp":{"client":{"nats":{"servers":"nats://nats:4222"}}}}'
     depends_on:
@@ -136,13 +138,41 @@ services:
       dockerfile: infra/docker/Dockerfile
       args:
         MODULE: server
+        BASE_IMAGE: eclipse-temurin:21-jdk-alpine
+        # Exploded classpath launch (see Dockerfile): required so Chronicle Map's embedded
+        # javac can resolve net.openhft.chronicle.hash.* from BOOT-INF/lib/*.jar at runtime.
+        MAIN_CLASS: com.rtpledger.server.RtpServerApplication
     image: rtp-ledger/rtp-server:latest
     container_name: rtp-server
     ports:
       - "8081:8081"
     environment:
+      # Chronicle Map/Queue need deep reflection on java.base AND jdk.compiler (the embedded
+      # net.openhft.compiler uses javac internals to generate value proxies at runtime). Use
+      # JDK_JAVA_OPTIONS (not JAVA_TOOL_OPTIONS): on Temurin Alpine, JAVA_TOOL_OPTIONS rejects
+      # --add-opens with "Unrecognized option".
+      JDK_JAVA_OPTIONS: >-
+        --add-opens java.base/java.lang=ALL-UNNAMED
+        --add-opens java.base/java.lang.reflect=ALL-UNNAMED
+        --add-opens java.base/java.io=ALL-UNNAMED
+        --add-opens java.base/java.util=ALL-UNNAMED
+        --add-opens java.base/java.nio=ALL-UNNAMED
+        --add-opens java.base/sun.nio.ch=ALL-UNNAMED
+        --add-opens java.base/jdk.internal.ref=ALL-UNNAMED
+        --add-opens java.base/jdk.internal.util=ALL-UNNAMED
+        --add-exports jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED
+        --add-exports jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED
+        --add-exports jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED
+        --add-exports jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED
+        --add-exports jdk.compiler/com.sun.tools.javac.jvm=ALL-UNNAMED
+        --add-exports jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED
+        --add-exports jdk.compiler/com.sun.tools.javac.model=ALL-UNNAMED
+        --add-exports jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED
+        --add-exports jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED
+        --add-exports jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED
+        --add-exports jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED
       CRDB_URL: jdbc:postgresql://cockroach:26257/defaultdb?sslmode=disable
-      SPRING_APPLICATION_JSON: '{"rtp":{"server":{"chronicle":{"map-path":"/data/chronicle/map","queue-path":"/data/chronicle/queue"}}}}'
+      SPRING_APPLICATION_JSON: '{"rtp":{"server":{"nats":{"servers":"nats://nats:4222"},"chronicle":{"map-path":"/data/chronicle/map","queue-path":"/data/chronicle/queue"}}}}'
     volumes:
       - chronicle_map:/data/chronicle/map
       - chronicle_queue:/data/chronicle/queue

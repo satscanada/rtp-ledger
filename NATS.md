@@ -70,7 +70,7 @@ From the repo root:
 cd infra/docker && docker compose up -d
 ```
 
-Then open NATS monitoring on **8222**, NATS UI on **3010**, **rtp-client** on **8080**, CockroachDB Console on **28080**, Prometheus on **9091**, and Grafana on **3000**. Use `./scripts/smoke-test.sh` after the stack is up.
+Then open NATS monitoring on **8222**, NATS UI on **3010**, **rtp-client** on **18080** (Docker Compose), CockroachDB Console on **28080**, Prometheus on **9091**, and Grafana on **3000**. Use `./scripts/smoke-test.sh` after the stack is up.
 
 ---
 
@@ -94,6 +94,6 @@ Optional: install the [NATS CLI](https://github.com/nats-io/natscli) (`brew inst
 
 1. Start **NATS** (this document).
 2. Start **rtp-server** (CP-03) so it subscribes to `ledger.>` and `ledger.balance.>` and can reply to balance requests.
-3. Start **rtp-client** (CP-02) so it connects to NATS and exposes HTTP on port **8080** (default).
+3. Start **rtp-client** (CP-02) so it connects to NATS and exposes HTTP (**8080** in-process; **`docker-compose` publishes host port 18080 → 8080**).
 
 Then use Postman or `curl` against the client: posting publishes to NATS; balance issues a request to the server over NATS.

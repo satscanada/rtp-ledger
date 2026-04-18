@@ -98,7 +98,7 @@ This is a query path — not on the Disruptor hot path — so blocking is accept
 **Goal**: Full local stack runnable with `docker compose up -d`
 **Deliverables**:
 - [x] `infra/docker/docker-compose.yml` — NATS (+ vendored `nats.conf`), NATS UI (`README-NATS-UI.md`, upstream curl recipe),
-      nats-surveyor, single-node CockroachDB, crdb-init, rtp-client (8080), rtp-server (8081),
+      nats-surveyor, single-node CockroachDB, crdb-init, rtp-client (host **18080** → 8080), rtp-server (8081),
       rtp-simulator (8082), Prometheus (host **9091** → container 9090), Grafana (3000), Cockroach admin UI (host **28080**); K6 remains under `infra/k6/` (HTTP load, not a compose service)
 - [x] `infra/db/V1__init.sql` — tables with hash-sharded PKs + indexes
 - [x] `infra/db/V2__seed.sql` — 100 seed accounts (10 regions × 10), stable UUIDs for `infra/k6/accounts.js`
@@ -179,7 +179,7 @@ This is the one place in the project where virtual threads are appropriate.
 - [ ] `k6/README.md` — 10-section guide:
   1. Prerequisites (Docker Desktop 4.x, 8GB RAM)
   2. Start the stack (`docker compose up -d`, health check commands)
-  3. Verify seed (`curl localhost:8080/api/v1/ledger/ca-east/{id}/balance` → 200)
+  3. Verify seed (`curl localhost:18080/api/v1/ledger/ca-east/{id}/balance` → 200)
   4. Run smoke test (`./scripts/smoke-test.sh`)
   5. Run load test (`docker compose run k6 run /scripts/rtp_load_test.js`)
   6. Run concurrency test (`docker compose run k6 run /scripts/rtp_concurrent_test.js`)

@@ -14,7 +14,7 @@ Services required (all in `infra/docker/docker-compose.yml`):
 | `crdb-2` | `cockroachdb/cockroach:v23.2.0` | 26258 | Node 2 |
 | `crdb-3` | `cockroachdb/cockroach:v23.2.0` | 26259 | Node 3 |
 | `crdb-init` | `cockroachdb/cockroach:v23.2.0` | — | One-shot init: `cockroach init` + DDL + seed |
-| `rtp-client` | `rtp-ledger/client:latest` | 8080 | Exposes `/actuator/prometheus` |
+| `rtp-client` | `rtp-ledger/client:latest` | host **18080** → **8080** | Exposes `/actuator/prometheus` on container **8080** |
 | `rtp-server` | `rtp-ledger/server:latest` | 8081 | Exposes `/actuator/prometheus` |
 | `prometheus` | `prom/prometheus:v2.51.0` | 9090 | Scrapes all services |
 | `grafana` | `grafana/grafana:10.4.0` | 3000 | Pre-provisioned dashboards |

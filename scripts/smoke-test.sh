@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Safe smoke test after `docker compose up -d` (run from repo root or any cwd).
+# Default CLIENT_URL matches Compose host map: rtp-client published on localhost:18080 → container 8080.
 set -euo pipefail
 
-BASE="${CLIENT_URL:-http://localhost:8080}"
+BASE="${CLIENT_URL:-http://localhost:18080}"
 REGION="${SMOKE_REGION:-ca-east}"
 # Seed accounts: ca-east-00 (credited), ca-east-01 (debtor other)
 ACCOUNT="${SMOKE_ACCOUNT_ID:-b7592f32-d833-52f5-83c4-1c2f367e52ab}"

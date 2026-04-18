@@ -2,13 +2,13 @@
 	"info": {
 		"_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
 		"name": "RTP Ledger — CP-02 Client",
-		"description": "Tests the rtp-client Spring Boot module: POST ledger posting (Disruptor → NATS) and GET balance (NATS request to server).\n\n**Prerequisites:** Client running on `baseUrl` (default http://localhost:8080). For GET balance to return 200, the CP-03 server must be running and subscribed to `ledger.balance.>`. NATS must be reachable at `rtp.client.nats.servers` in application.yml.\n\n**Path `accountId`:** Publish subject is `ledger.{region}.{accountId}`; use the same id as in your test scenario (often the credited account UUID).",
+		"description": "Tests the rtp-client Spring Boot module: POST ledger posting (Disruptor → NATS) and GET balance (NATS request to server).\n\n**Prerequisites:** Client running on `baseUrl` (Docker Compose default http://localhost:18080; local `mvn spring-boot:run` default http://localhost:8080). For GET balance to return 200, the CP-03 server must be running and subscribed to `ledger.balance.>`. NATS must be reachable at `rtp.client.nats.servers` in application.yml.\n\n**Path `accountId`:** Publish subject is `ledger.{region}.{accountId}`; use the same id as in your test scenario (often the credited account UUID).",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
 		{
 			"key": "baseUrl",
-			"value": "http://localhost:8080"
+			"value": "http://localhost:18080"
 		},
 		{
 			"key": "region",
