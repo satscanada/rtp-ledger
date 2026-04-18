@@ -5,6 +5,7 @@ import com.lmax.disruptor.EventHandler;
 import com.rtpledger.server.chronicle.ChronicleBalanceEngine;
 import com.rtpledger.server.chronicle.ChronicleQueueAppender;
 import com.rtpledger.server.chronicle.PostingResult;
+import com.rtpledger.server.metrics.ServerMetrics;
 import com.rtpledger.server.nats.TransactionNatsReplyBody;
 import com.rtpledger.shared.model.LedgerEntry;
 import io.nats.client.Connection;
@@ -23,12 +24,19 @@ public class LedgerEventHandler implements EventHandler<LedgerServerEvent> {
     private final ChronicleQueueAppender queueAppender;
     private final Connection natsConnection;
     private final ObjectMapper objectMapper;
+    private final ServerMetrics serverMetrics;
 
     @Override
     public void onEvent(LedgerServerEvent event, long sequence, boolean endOfBatch) {
         try {
+            long tBalance = System.nanoTime();
             PostingResult posting = balanceEngine.applyPosting(event.getPayload());
+            serverMetrics.recordBalanceComputeNanos(System.nanoTime() - tBalance);
+
+            long tAppend = System.nanoTime();
             long chronicleIndex = queueAppender.appendPostingPayload(posting);
+            serverMetrics.recordQueueAppendNanos(System.nanoTime() - tAppend);
+
             LedgerEntry ledgerEntry = posting.toLedgerEntry(chronicleIndex);
 
             String replyTo = event.getReplyTo();
@@ -58,7 +66,9 @@ public class LedgerEventHandler implements EventHandler<LedgerServerEvent> {
                     OffsetDateTime.now().toString(),
                     null
             );
+            long tReply = System.nanoTime();
             natsConnection.publish(replyTo, objectMapper.writeValueAsBytes(body));
+            serverMetrics.recordNatsReplyNanos(System.nanoTime() - tReply);
             log.debug("NATS transaction reply sent correlationId={}", ledgerEntry.correlationId());
         } catch (Exception e) {
             log.warn("NATS reply failed replyTo={}", replyTo, e);
@@ -76,7 +86,12 @@ public class LedgerEventHandler implements EventHandler<LedgerServerEvent> {
                     OffsetDateTime.now().toString(),
                     "FAILED"
             );
-            natsConnection.publish(replyTo, objectMapper.writeValueAsBytes(body));
+            long tReply = System.nanoTime();
+            try {
+                natsConnection.publish(replyTo, objectMapper.writeValueAsBytes(body));
+            } finally {
+                serverMetrics.recordNatsReplyNanos(System.nanoTime() - tReply);
+            }
         } catch (Exception e) {
             log.warn("NATS failure reply could not be sent replyTo={}", replyTo, e);
         }

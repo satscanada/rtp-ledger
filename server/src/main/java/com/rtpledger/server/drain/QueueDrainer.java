@@ -3,8 +3,11 @@ package com.rtpledger.server.drain;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rtpledger.server.chronicle.PostingResult;
 import com.rtpledger.server.config.RtpServerProperties;
+import com.rtpledger.server.metrics.ServerMetrics;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.openhft.chronicle.queue.ExcerptTailer;
@@ -37,6 +40,8 @@ public class QueueDrainer {
     private final TailPointerRepository tailPointerRepository;
     private final LedgerEntryRepository ledgerEntryRepository;
     private final LedgerBalanceRepository ledgerBalanceRepository;
+    private final MeterRegistry meterRegistry;
+    private final ServerMetrics serverMetrics;
 
     private final AtomicBoolean running = new AtomicBoolean(true);
     private ExecutorService executor;
@@ -66,9 +71,33 @@ public class QueueDrainer {
         };
         executor = Executors.newSingleThreadExecutor(factory);
         executor.submit(this::drainLoop);
+
+        Gauge.builder("rtp.server.chronicle.queue.lag", this, QueueDrainer::estimatedQueueBacklogExcerpts)
+                .description("Approximate Chronicle excerpts pending drain (demo alert if > 10K)")
+                .register(meterRegistry);
+
         log.info("QueueDrainer started (batchSize={}, flushIntervalMs={})",
                 properties.getDrainer().getBatchSize(),
                 properties.getDrainer().getFlushIntervalMs());
+    }
+
+    /**
+     * Best-effort backlog between last queue index and drainer tail position.
+     */
+    double estimatedQueueBacklogExcerpts() {
+        if (tailer == null) {
+            return 0;
+        }
+        try {
+            long last = ledgerQueue.lastIndex();
+            long at = tailer.index();
+            if (last < 0 || at < 0) {
+                return 0;
+            }
+            return Math.max(0.0, (double) (last - at));
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
     @PreDestroy
@@ -138,19 +167,28 @@ public class QueueDrainer {
         String serverId = properties.getDrainer().getServerId();
         long maxIndex = batch.stream().mapToLong(DrainItem::chronicleIndex).max().orElseThrow();
 
-        Connection connection = dataSource.getConnection();
-        connection.setAutoCommit(false);
+        serverMetrics.recordDrainerBatchSize(batch.size());
+        long t0 = System.nanoTime();
+        Connection connection = null;
         try {
+            connection = dataSource.getConnection();
+            connection.setAutoCommit(false);
             ledgerEntryRepository.insertBatch(connection, batch);
             ledgerBalanceRepository.upsertBatch(connection, batch);
             tailPointerRepository.upsertCommittedIndex(connection, serverId, maxIndex);
             connection.commit();
             log.debug("Drainer flushed batch size={} maxChronicleIndex={}", batch.size(), maxIndex);
         } catch (Exception e) {
-            connection.rollback();
+            if (connection != null) {
+                connection.rollback();
+            }
+            serverMetrics.incrementDrainerFlushFailures();
             throw e;
         } finally {
-            connection.close();
+            serverMetrics.recordDrainerFlushNanos(System.nanoTime() - t0);
+            if (connection != null) {
+                connection.close();
+            }
         }
     }
 }

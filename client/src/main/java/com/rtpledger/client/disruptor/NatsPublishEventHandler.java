@@ -3,6 +3,7 @@ package com.rtpledger.client.disruptor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lmax.disruptor.EventHandler;
 import com.rtpledger.client.config.RtpClientProperties;
+import com.rtpledger.client.metrics.ClientMetrics;
 import com.rtpledger.shared.message.LedgerPostingMessage;
 import io.nats.client.Connection;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,7 @@ public class NatsPublishEventHandler implements EventHandler<TransactionEvent> {
     private final ObjectMapper objectMapper;
     private final Connection natsConnection;
     private final RtpClientProperties properties;
+    private final ClientMetrics clientMetrics;
 
     @Override
     public void onEvent(TransactionEvent event, long sequence, boolean endOfBatch) {
@@ -30,8 +32,10 @@ public class NatsPublishEventHandler implements EventHandler<TransactionEvent> {
                     event.getAccountId()
             );
             byte[] data = objectMapper.writeValueAsBytes(payload);
-            natsConnection.publish(subject, data);
+            byte[] payloadBytes = data;
+            clientMetrics.recordNatsPublishLatency(() -> natsConnection.publish(subject, payloadBytes));
         } catch (Exception e) {
+            clientMetrics.incrementNatsPublishFailures();
             log.error("NATS publish failed correlationId={}", event.getCorrelationId(), e);
         } finally {
             event.clear();

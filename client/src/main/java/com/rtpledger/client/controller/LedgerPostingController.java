@@ -2,6 +2,7 @@ package com.rtpledger.client.controller;
 
 import com.lmax.disruptor.RingBuffer;
 import com.rtpledger.client.disruptor.TransactionEvent;
+import com.rtpledger.client.metrics.ClientMetrics;
 import com.rtpledger.client.nats.BalanceQueryHandler;
 import com.rtpledger.client.validation.BianTransactionValidator;
 import com.rtpledger.shared.model.BianCreditTransferTransaction;
@@ -28,6 +29,7 @@ public class LedgerPostingController {
     private final BianTransactionValidator validator;
     private final RingBuffer<TransactionEvent> ringBuffer;
     private final BalanceQueryHandler balanceQueryHandler;
+    private final ClientMetrics clientMetrics;
 
     @PostMapping("/{region}/{accountId}/post")
     public ResponseEntity<?> post(
@@ -38,6 +40,7 @@ public class LedgerPostingController {
         List<String> errors = validator.validate(body);
         UUID correlationId = UUID.randomUUID();
         if (!errors.isEmpty()) {
+            clientMetrics.incrementTransactionsRejected("validation");
             return ResponseEntity.badRequest().body(new PostingRejectedResponse(
                     correlationId.toString(),
                     "REJECTED",
@@ -45,18 +48,22 @@ public class LedgerPostingController {
             ));
         }
 
+        var disruptorSample = clientMetrics.startDisruptorPublishSample();
         boolean published = ringBuffer.tryPublishEvent((event, sequence) -> {
             event.setCorrelationId(correlationId.toString());
             event.setRegion(region);
             event.setAccountId(accountId);
             event.setTransaction(body);
         });
+        clientMetrics.recordDisruptorPublishLatency(disruptorSample);
 
         if (!published) {
+            clientMetrics.incrementTransactionsRejected("overload");
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                     .body(new OverloadedResponse(correlationId.toString(), "OVERLOADED"));
         }
 
+        clientMetrics.incrementTransactionsAccepted(region);
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(new PostingAcceptedResponse(
                 correlationId.toString(),
                 "ACCEPTED",
@@ -71,7 +78,12 @@ public class LedgerPostingController {
             @PathVariable String region,
             @PathVariable UUID accountId
     ) {
-        return balanceQueryHandler.query(region, accountId);
+        long t0 = System.nanoTime();
+        try {
+            return balanceQueryHandler.query(region, accountId);
+        } finally {
+            clientMetrics.recordBalanceNanos(System.nanoTime() - t0);
+        }
     }
 
     public record PostingAcceptedResponse(

@@ -1,7 +1,7 @@
 # TODO.md — RTP Ledger Checkpoint Tracker
 
 ## Current Checkpoint
-**CP-06: Observability (Prometheus + Grafana)**
+**CP-07: RTP Simulator Module**
 Status: 🔲 NOT STARTED
 
 ---
@@ -114,7 +114,7 @@ This is a query path — not on the Disruptor hot path — so blocking is accept
 ### CP-06 — Observability (Prometheus + Grafana)
 **Goal**: Live dashboards showing p95/p97/p99 latency, throughput, system health — readable during a demo
 **Deliverables**:
-- [ ] Micrometer custom metrics in client (`NatsPublishEventHandler`, `BalanceQueryHandler`):
+- [x] Micrometer custom metrics — client (`ClientMetrics`, `LedgerPostingController`, `NatsPublishEventHandler`; balance timer on GET path):
   - `rtp.client.transactions.accepted` (counter, tags: region)
   - `rtp.client.transactions.rejected` (counter, tag: reason)
   - `rtp.client.disruptor.publish.latency` (timer)
@@ -122,23 +122,19 @@ This is a query path — not on the Disruptor hot path — so blocking is accept
   - `rtp.client.nats.publish.failures` (counter)
   - `rtp.client.disruptor.ring.remaining` (gauge)
   - `rtp.client.balance.query.latency` (timer — GET balance NATS roundtrip)
-- [ ] Micrometer custom metrics in server (`LedgerEventHandler`, `QueueDrainer`):
+- [x] Micrometer custom metrics — server (`ServerMetrics`, `LedgerEventHandler`, `QueueDrainer`):
   - `rtp.server.balance.compute.latency` (timer)
   - `rtp.server.queue.append.latency` (timer)
   - `rtp.server.nats.reply.latency` (timer)
-  - `rtp.server.drainer.batch.size` (histogram)
+  - `rtp.server.drainer.batch.size` (distribution summary → Prometheus sum/count)
   - `rtp.server.drainer.flush.latency` (timer)
   - `rtp.server.drainer.flush.failures` (counter)
   - `rtp.server.chronicle.queue.lag` (gauge — demo alert if > 10K)
-- [ ] `grafana/provisioning/datasources/prometheus.yml`
-- [ ] `grafana/provisioning/dashboards/rtp.yml`
-- [ ] `grafana/dashboards/rtp-ledger.json` — 3-row dashboard:
-  - Row 1: Transaction Rate (TPS), HTTP p95/p97/p99, NATS publish p99, Balance compute p99
-  - Row 2: Ring Buffer remaining, Chronicle Queue lag (with 10K alert band), Drainer batch heatmap, Drainer flush p99
-  - Row 3: NATS message rate, NATS slow consumers, CockroachDB QPS, CockroachDB SQL p99
-  - All panels use 5s refresh — fast enough to show live activity during K6 run
+- [x] `infra/grafana/provisioning/datasources/prometheus.yml` (uid `prometheus`)
+- [x] `infra/grafana/provisioning/dashboards/rtp.yml`
+- [x] `infra/grafana/dashboards/rtp-ledger.json` — 3-row dashboard (TPS, HTTP/NATS/balance latency, ring & Chronicle lag, drainer, surveyor & CRDB); **5s refresh**
 
-**STOP GATE**: Grafana at localhost:3000 shows live data from all 3 services with 5s refresh → PROCEED to CP-07
+**STOP GATE**: Grafana at localhost:3000 shows live data from client, server, simulator scrapes with 5s refresh → PROCEED to CP-07 ✅
 
 ---
 
