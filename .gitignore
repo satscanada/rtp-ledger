@@ -30,3 +30,33 @@ out/
 .DS_Store
 Thumbs.db
 
+### Env & secrets (never commit) ###
+.env
+.env.*
+!.env.example
+
+### Logs & temp ###
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+
+### VS Code / Cursor (local workspace) ###
+.vscode/
+
+### Eclipse ###
+.settings/
+.project
+.classpath
+
+### Maven / tooling ###
+.flattened-pom.xml
+
+### Docker Compose overrides (local-only) ###
+docker-compose.override.yml
+**/docker-compose.override.yml
+
+### Coverage / reports ###
+**/jacoco.exec
+**/coverage/
