@@ -21,6 +21,7 @@ rtp:
     nats:
       servers: nats://localhost:4222
       connection-timeout-ms: 5000
+      trace-subject: ledger.trace.v1
     chronicle:
       map-path: ${user.dir}/var/chronicle/map
       queue-path: ${user.dir}/var/chronicle/queue

@@ -118,6 +118,23 @@ curl -fsS http://localhost:8082/simulate/status
 
 ---
 
+## Flow visualization (client -> NATS -> server/LMAX -> DB)
+
+A metadata-only trace stream now captures stage-by-stage progression for each `correlationId`.
+
+- **Trace subject**: `ledger.trace.v1`
+- **Timeline API**: `GET /api/v1/ledger/trace/{correlationId}`
+- **Recent API**: `GET /api/v1/ledger/trace/recent`
+- **Grafana panels**: RTP Ledger dashboard, **Row 4 — End-to-end flow trace**
+
+Stage sequence for normal posting:
+
+`CLIENT_RING_PUBLISH_OK` -> `CLIENT_HTTP_ACCEPTED` -> `CLIENT_NATS_PUBLISH_OK` -> `SERVER_NATS_RECEIVED` -> `SERVER_RING_ENQUEUED` -> `SERVER_BALANCE_COMPUTE_OK` -> `SERVER_QUEUE_APPEND_OK` -> `DRAINER_BATCH_FLUSH_OK`
+
+Only metadata is included in traces (correlation ID, account ID, amount/currency, status, balances, chronicle index where available).
+
+---
+
 ## Key numbers (prototype targets)
 
 | Scenario | p95 (threshold) | p99 (threshold) |

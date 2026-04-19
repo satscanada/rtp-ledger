@@ -4,6 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rtpledger.server.chronicle.PostingResult;
 import com.rtpledger.server.config.RtpServerProperties;
 import com.rtpledger.server.metrics.ServerMetrics;
+import com.rtpledger.server.nats.FlowTracePublisher;
+import com.rtpledger.shared.message.FlowTraceEvent;
+import com.rtpledger.shared.message.FlowTraceStage;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import io.micrometer.core.instrument.Gauge;
@@ -42,6 +45,7 @@ public class QueueDrainer {
     private final LedgerBalanceRepository ledgerBalanceRepository;
     private final MeterRegistry meterRegistry;
     private final ServerMetrics serverMetrics;
+    private final FlowTracePublisher flowTracePublisher;
 
     private final AtomicBoolean running = new AtomicBoolean(true);
     private ExecutorService executor;
@@ -177,12 +181,48 @@ public class QueueDrainer {
             ledgerBalanceRepository.upsertBatch(connection, batch);
             tailPointerRepository.upsertCommittedIndex(connection, serverId, maxIndex);
             connection.commit();
+            for (DrainItem item : batch) {
+                PostingResult posting = item.posting();
+                flowTracePublisher.publish(new FlowTraceEvent(
+                        posting.correlationId(),
+                        null,
+                        posting.accountId().toString(),
+                        FlowTraceStage.DRAINER_BATCH_FLUSH_OK,
+                        posting.status(),
+                        java.time.OffsetDateTime.now().toString(),
+                        posting.amount().toPlainString(),
+                        posting.currency(),
+                        posting.debitCreditIndicator(),
+                        posting.previousBalance().toPlainString(),
+                        posting.currentBalance().toPlainString(),
+                        item.chronicleIndex(),
+                        "batch_size=" + batch.size()
+                ));
+            }
             log.debug("Drainer flushed batch size={} maxChronicleIndex={}", batch.size(), maxIndex);
         } catch (Exception e) {
             if (connection != null) {
                 connection.rollback();
             }
             serverMetrics.incrementDrainerFlushFailures();
+            for (DrainItem item : batch) {
+                PostingResult posting = item.posting();
+                flowTracePublisher.publish(new FlowTraceEvent(
+                        posting.correlationId(),
+                        null,
+                        posting.accountId().toString(),
+                        FlowTraceStage.DRAINER_BATCH_FLUSH_FAILED,
+                        "FAILED",
+                        java.time.OffsetDateTime.now().toString(),
+                        posting.amount().toPlainString(),
+                        posting.currency(),
+                        posting.debitCreditIndicator(),
+                        posting.previousBalance().toPlainString(),
+                        posting.currentBalance().toPlainString(),
+                        item.chronicleIndex(),
+                        e.getMessage()
+                ));
+            }
             throw e;
         } finally {
             serverMetrics.recordDrainerFlushNanos(System.nanoTime() - t0);

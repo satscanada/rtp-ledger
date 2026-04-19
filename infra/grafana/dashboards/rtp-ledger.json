@@ -234,6 +234,75 @@
       ],
       "title": "Cockroach SQL activity",
       "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 24 },
+      "id": 103,
+      "title": "Row 4 — End-to-end flow trace",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "palette-classic" }, "unit": "ops" },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 25 },
+      "id": 10,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
+      "targets": [
+        {
+          "expr": "sum by (stage) (rate(rtp_client_trace_events_total[1m]))",
+          "legendFormat": "client {{stage}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Client flow stage rate (trace events/s)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "palette-classic" }, "unit": "ops" },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 25 },
+      "id": 11,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
+      "targets": [
+        {
+          "expr": "sum by (stage) (rate(rtp_server_trace_events_total[1m]))",
+          "legendFormat": "server {{stage}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Server flow stage rate (trace events/s)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "palette-classic" }, "unit": "percentunit", "min": 0, "max": 1 },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 33 },
+      "id": 12,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
+      "targets": [
+        {
+          "expr": "sum(rate(rtp_client_trace_events_total{status=\"FAILED\"}[5m])) / clamp_min(sum(rate(rtp_client_trace_events_total[5m])), 1)",
+          "legendFormat": "client failed ratio",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(rtp_server_trace_events_total{status=\"FAILED\"}[5m])) / clamp_min(sum(rate(rtp_server_trace_events_total[5m])), 1)",
+          "legendFormat": "server failed ratio",
+          "refId": "B"
+        }
+      ],
+      "title": "Trace failed event ratio (5m)",
+      "type": "timeseries"
     }
   ],
   "refresh": "5s",

@@ -14,7 +14,13 @@ rtp:
       servers: nats://localhost:4222
       connection-timeout-ms: 5000
       subject-prefix: ledger
+      trace-subject: ledger.trace.v1
       balance-request-timeout-ms: 500
+    trace:
+      max-correlations: 5000
+      max-events-per-correlation: 64
+      retention-minutes: 30
+      recent-limit: 100
 
 management:
   endpoints:
