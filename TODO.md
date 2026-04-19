@@ -2,7 +2,7 @@
 
 ## Current Checkpoint
 **CP-09: Pitch Assets (README + Architecture Diagram + PITCH.md)**
-Status: 🔲 NOT STARTED
+Status: ✅ COMPLETE — prototype pitch assets delivered; see STOP GATE below
 
 ---
 
@@ -188,8 +188,6 @@ This is the one place in the project where virtual threads are appropriate.
   8. View results in Grafana (localhost:3000, admin/admin; Prometheus + VictoriaMetrics datasources)
   9. Interpreting p95/p97/p99 for RTP SLA context
   10. Failure triage (Chronicle lag > 10K, 503 backpressure, NATS slow consumers)
-  9. Interpreting p95/p97/p99 for RTP SLA context
-  10. Failure triage (Chronicle lag > 10K, 503 backpressure, NATS slow consumers)
 
 **STOP GATE**: K6 load test completes with all thresholds passing on a suitably sized host; k6 metrics visible via VictoriaMetrics in Grafana → PROCEED to CP-09 ✅
 
@@ -198,7 +196,7 @@ This is the one place in the project where virtual threads are appropriate.
 ### CP-09 — Pitch Assets (README + Architecture Diagram + PITCH.md)
 **Goal**: The repo tells its own story when a senior opens it cold. These files ARE the pitch.
 **Deliverables**:
-- [ ] `README.md` (root) — sections:
+- [x] `README.md` (root) — sections:
   - **Problem** — RTP aggregation onto single Apple Pay / Google Pay accounts: the hot account problem
   - **Solution** — Architecture overview in 4 bullet points
   - **Architecture Diagram** — Mermaid flowchart (full flow with latency annotations at each hop)
@@ -206,21 +204,21 @@ This is the one place in the project where virtual threads are appropriate.
   - **Quick Start** — `docker compose up -d` → `./scripts/smoke-test.sh` → open Grafana
   - **Running Tests** — K6 and simulator commands
   - **Key Numbers** — expected p99 per scenario, Chronicle Map compute target < 50µs
-- [ ] `PITCH.md` — the three questions seniors always ask:
+- [x] `PITCH.md` — the three questions seniors always ask:
   - **Why not Kafka?** — NATS latency profile, no broker persistence needed, Chronicle Queue owns durability
   - **Why not Redis for balance?** — Chronicle Map: off-heap, zero network hop, compute-locked per account (<1µs vs Redis ~100µs RTT)
   - **Why not Postgres / plain JDBC?** — CockroachDB hash sharding for hot ranges, geo-aware routing, no manual partitioning
   - **Why LMAX Disruptor?** — mechanical sympathy, cache-line padding, wait strategy tuning, 25M+ events/sec on commodity hardware
   - **What would production add?** — JetStream for NATS durability, mTLS, rate limiting, dead-letter handling, multi-region CockroachDB
-- [ ] `ARCHITECTURE.md` — deeper technical narrative:
+- [x] `ARCHITECTURE.md` — deeper technical narrative:
   - Threading model diagram (ASCII, showing which thread owns each operation)
   - Chronicle Map vs Chronicle Queue — what each owns and why
   - Balance correctness guarantee under concurrent load
   - Recovery scenario walkthrough (crash mid-batch → restart → tail pointer replay)
   - CockroachDB hot range prevention — why hash sharding matters for this use case
 
-**STOP GATE**: A senior with no prior context can open README.md, run `docker compose up -d`,
-and watch live transactions in Grafana within 5 minutes → PROTOTYPE COMPLETE ✅
+**STOP GATE**: A senior with no prior context can open README.md, run `docker compose -f infra/docker/docker-compose.yml up -d`,
+then `./scripts/smoke-test.sh`, open Grafana, and (optionally) fire the simulator — live metrics within ~5 minutes → PROTOTYPE COMPLETE ✅
 
 ---
 
@@ -231,3 +229,4 @@ and watch live transactions in Grafana within 5 minutes → PROTOTYPE COMPLETE �
 - **CP-04** — JDBC drainer thread: hybrid batch flush + tail pointer + `infra/db/V1__init.sql` reference DDL (`mvn compile` verified)
 - **CP-07** — RTP Simulator module: Spring Boot load generator (`simulator`), virtual-thread scenarios, NATS to client subjects, Grafana-visible bursts (TestNG verified; STOP GATE passed)
 - **CP-08** — K6 suites under `infra/k6/scripts/`, `run.sh` entrypoint wrapper with dual remote-write (`--out` to both Prometheus and VictoriaMetrics), Compose `k6` profile, both Grafana datasources provisioned
+- **CP-09** — Pitch assets: root `README.md` (problem, solution, Mermaid diagram, rationale, quick start, tests, key numbers, services), `PITCH.md` (Kafka/Redis/Postgres/Disruptor/production), `ARCHITECTURE.md` (threading, correctness, recovery, hash sharding)
