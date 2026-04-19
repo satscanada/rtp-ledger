@@ -26,6 +26,7 @@ public class RtpServerProperties {
     public static class Nats {
         private String servers = "nats://localhost:4222";
         private int connectionTimeoutMs = 5000;
+        private String traceSubject = "rtp.trace.v1";
     }
 
     @Getter

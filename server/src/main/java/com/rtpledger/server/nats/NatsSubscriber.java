@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lmax.disruptor.RingBuffer;
 import com.rtpledger.server.chronicle.ChronicleBalanceEngine;
 import com.rtpledger.server.disruptor.LedgerServerEvent;
+import com.rtpledger.shared.message.FlowTraceEvent;
+import com.rtpledger.shared.message.FlowTraceStage;
 import com.rtpledger.shared.message.LedgerPostingMessage;
 import com.rtpledger.shared.model.BalanceResponse;
 import io.nats.client.Connection;
@@ -25,6 +27,7 @@ public class NatsSubscriber {
     private final ObjectMapper objectMapper;
     private final RingBuffer<LedgerServerEvent> ledgerRingBuffer;
     private final ChronicleBalanceEngine balanceEngine;
+    private final FlowTracePublisher flowTracePublisher;
 
     @PostConstruct
     public void subscribe() {
@@ -63,14 +66,77 @@ public class NatsSubscriber {
     private void onTransactionMessage(Message msg) {
         try {
             LedgerPostingMessage payload = objectMapper.readValue(msg.getData(), LedgerPostingMessage.class);
+            flowTracePublisher.publish(new FlowTraceEvent(
+                    payload.correlationId(),
+                    payload.region(),
+                    payload.accountId(),
+                    FlowTraceStage.SERVER_NATS_RECEIVED,
+                    "RECEIVED",
+                    java.time.OffsetDateTime.now().toString(),
+                    resolveAmount(payload),
+                    resolveCurrency(payload),
+                    null,
+                    null,
+                    null,
+                    null,
+                    msg.getSubject()
+            ));
             boolean published = ledgerRingBuffer.tryPublishEvent((event, sequence) ->
                     event.load(payload, msg.getReplyTo())
             );
             if (!published) {
+                flowTracePublisher.publish(new FlowTraceEvent(
+                        payload.correlationId(),
+                        payload.region(),
+                        payload.accountId(),
+                        FlowTraceStage.SERVER_RING_REJECTED,
+                        "REJECTED",
+                        java.time.OffsetDateTime.now().toString(),
+                        resolveAmount(payload),
+                        resolveCurrency(payload),
+                        null,
+                        null,
+                        null,
+                        null,
+                        "server_ring_full"
+                ));
                 log.warn("Server Disruptor ring full; drop correlationId={}", payload.correlationId());
+            } else {
+                flowTracePublisher.publish(new FlowTraceEvent(
+                        payload.correlationId(),
+                        payload.region(),
+                        payload.accountId(),
+                        FlowTraceStage.SERVER_RING_ENQUEUED,
+                        "ENQUEUED",
+                        java.time.OffsetDateTime.now().toString(),
+                        resolveAmount(payload),
+                        resolveCurrency(payload),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
+                ));
             }
         } catch (Exception e) {
             log.error("Failed to enqueue transaction from NATS", e);
         }
+    }
+
+    private static String resolveAmount(LedgerPostingMessage payload) {
+        if (payload == null || payload.transaction() == null ||
+                payload.transaction().creditTransferTransactionInformation() == null ||
+                payload.transaction().creditTransferTransactionInformation().instructedAmount() == null) {
+            return null;
+        }
+        return payload.transaction().creditTransferTransactionInformation().instructedAmount().toPlainString();
+    }
+
+    private static String resolveCurrency(LedgerPostingMessage payload) {
+        if (payload == null || payload.transaction() == null ||
+                payload.transaction().creditTransferTransactionInformation() == null) {
+            return null;
+        }
+        return payload.transaction().creditTransferTransactionInformation().instructedCurrency();
     }
 }

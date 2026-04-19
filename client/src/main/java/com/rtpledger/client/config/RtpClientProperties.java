@@ -11,6 +11,7 @@ public class RtpClientProperties {
 
     private final Disruptor disruptor = new Disruptor();
     private final Nats nats = new Nats();
+    private final Trace trace = new Trace();
 
     @Getter
     @Setter
@@ -25,6 +26,16 @@ public class RtpClientProperties {
         private String servers = "nats://localhost:4222";
         private int connectionTimeoutMs = 5000;
         private String subjectPrefix = "ledger";
+        private String traceSubject = "rtp.trace.v1";
         private int balanceRequestTimeoutMs = 500;
+    }
+
+    @Getter
+    @Setter
+    public static class Trace {
+        private int maxCorrelations = 5000;
+        private int maxEventsPerCorrelation = 64;
+        private int retentionMinutes = 30;
+        private int recentLimit = 100;
     }
 }
