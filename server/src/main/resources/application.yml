@@ -13,6 +13,7 @@ spring:
       minimum-idle: 5
 
 rtp:
+  default-currency: ${RTP_DEFAULT_CURRENCY:CAD}
   server:
     disruptor:
       ring-buffer-size: 65536

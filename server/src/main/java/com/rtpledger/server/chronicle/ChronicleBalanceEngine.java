@@ -5,10 +5,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rtpledger.shared.message.LedgerPostingMessage;
 import com.rtpledger.shared.model.BianCreditTransferTransaction;
 import com.rtpledger.shared.model.BalanceResponse;
+import com.rtpledger.server.metrics.ServerMetrics;
 import com.rtpledger.server.util.AccountIdentifiers;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.openhft.chronicle.map.ChronicleMap;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -25,6 +27,10 @@ public class ChronicleBalanceEngine {
     private static final ObjectMapper JSON = new ObjectMapper();
 
     private final ChronicleMap<String, String> balanceMap;
+    private final ServerMetrics serverMetrics;
+
+    @Value("${rtp.default-currency:CAD}")
+    private String defaultCurrency;
 
     public PostingResult applyPosting(LedgerPostingMessage message) {
         BianCreditTransferTransaction tx = message.transaction();
@@ -95,21 +101,22 @@ public class ChronicleBalanceEngine {
             return new BalanceResponse(
                     accountId,
                     BigDecimal.ZERO.setScale(2, RoundingMode.HALF_EVEN),
-                    "CAD",
+                    defaultCurrency,
                     OffsetDateTime.now()
             );
         }
         try {
             JsonNode node = JSON.readTree(json);
             BigDecimal amt = new BigDecimal(node.get("amt").asText()).setScale(2, RoundingMode.HALF_EVEN);
-            String ccy = node.has("ccy") ? node.get("ccy").asText() : "CAD";
+            String ccy = node.has("ccy") ? node.get("ccy").asText() : defaultCurrency;
             return new BalanceResponse(accountId, amt, ccy, OffsetDateTime.now());
         } catch (Exception e) {
-            log.warn("Corrupt balance map entry for accountId={}", key, e);
+            log.error("Corrupt Chronicle Map balance entry for accountId={} — returning zero balance; investigate immediately", key, e);
+            serverMetrics.incrementBalanceCorruptionDetected();
             return new BalanceResponse(
                     accountId,
                     BigDecimal.ZERO.setScale(2, RoundingMode.HALF_EVEN),
-                    "CAD",
+                    defaultCurrency,
                     OffsetDateTime.now()
             );
         }

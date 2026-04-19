@@ -20,6 +20,7 @@ public class ServerMetrics {
     private final DistributionSummary drainerBatchSize;
     private final Timer drainerFlushLatency;
     private final Counter drainerFlushFailures;
+    private final Counter balanceCorruptionDetected;
 
     public ServerMetrics(MeterRegistry registry) {
         this.balanceComputeLatency = Timer.builder("rtp.server.balance.compute.latency")
@@ -39,6 +40,9 @@ public class ServerMetrics {
                 .register(registry);
         this.drainerFlushFailures = Counter.builder("rtp.server.drainer.flush.failures")
                 .description("Drainer flush failures (rolled back)")
+                .register(registry);
+        this.balanceCorruptionDetected = Counter.builder("rtp.server.balance.corruption.detected")
+                .description("Chronicle Map entries that failed JSON parsing — indicates data corruption")
                 .register(registry);
     }
 
@@ -66,5 +70,9 @@ public class ServerMetrics {
 
     public void incrementDrainerFlushFailures() {
         drainerFlushFailures.increment();
+    }
+
+    public void incrementBalanceCorruptionDetected() {
+        balanceCorruptionDetected.increment();
     }
 }

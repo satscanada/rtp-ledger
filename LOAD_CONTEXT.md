@@ -12,10 +12,11 @@ Paste this block at the start of every new AI conversation:
 ```
 /loadcontext
 Project: rtp-ledger
-Read: CLAUDE.md, TODO.md, then the specific module file in .github/instructions/
+Read: CLAUDE.md, TODO.md, PRODUCTION_TODO.md, then the specific module file in .github/instructions/
 I am continuing development. Do not suggest architectural changes without a STOP GATE review.
 Use Spring Boot 3.2 + Lombok conventions for implementation (constructor injection, minimal boilerplate).
-Current checkpoint: CP-09 Pitch Assets — COMPLETE (prototype pitch docs delivered; see TODO.md)
+Current phase: Production hardening — all prototype checkpoints (CP-01→CP-09) are COMPLETE.
+Active work: implement PRODUCTION_TODO.md items in priority order (P0 first). Each item requires STOP GATE before merge.
 ```
 
 ## What Each File Tells the AI
@@ -23,7 +24,8 @@ Current checkpoint: CP-09 Pitch Assets — COMPLETE (prototype pitch docs delive
 | File | Purpose |
 |------|---------|
 | `CLAUDE.md` | Architecture decisions, data models, critical rules |
-| `TODO.md` | Current checkpoint, what is done, what is next |
+| `TODO.md` | Prototype checkpoint registry (CP-01→CP-09, all complete) + production backlog summary |
+| `PRODUCTION_TODO.md` | Full production hardening backlog — P0 through P5, implementation order, file-level pointers |
 | `.github/instructions/client.instructions.md` | Client module rules |
 | `.github/instructions/server.instructions.md` | Server module rules |
 | `.github/instructions/infra.instructions.md` | Docker, DB, K6 rules |

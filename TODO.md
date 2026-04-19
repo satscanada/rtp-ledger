@@ -4,6 +4,9 @@
 **CP-09: Pitch Assets (README + Architecture Diagram + PITCH.md)**
 Status: ✅ COMPLETE — prototype pitch assets delivered; see STOP GATE below
 
+**Next phase**: Production hardening — see [`PRODUCTION_TODO.md`](PRODUCTION_TODO.md) for the full backlog.
+Implement items in priority order (P0 → P5). Each item requires a STOP GATE review before merge.
+
 ---
 
 ## Project Direction Note
@@ -219,6 +222,33 @@ This is the one place in the project where virtual threads are appropriate.
 
 **STOP GATE**: A senior with no prior context can open README.md, run `docker compose -f infra/docker/docker-compose.yml up -d`,
 then `./scripts/smoke-test.sh`, open Grafana, and (optionally) fire the simulator — live metrics within ~5 minutes → PROTOTYPE COMPLETE ✅
+
+---
+
+---
+
+## Production Hardening Backlog
+All prototype checkpoints (CP-01 → CP-09) are complete. Production work is tracked in [`PRODUCTION_TODO.md`](PRODUCTION_TODO.md).
+
+Summary of open items by priority:
+
+| ID | Description | Priority |
+|----|-------------|----------|
+| P0-01 | Server Disruptor ring-full → silent data loss; reply FAILED via NATS | P0 |
+| P0-02 | NATS reconnection loop + health indicator | P0 |
+| P1-01 | Cross-currency guard in `ChronicleBalanceEngine.applyPosting` | P1 |
+| P1-02 | Configurable negative balance guard on DBIT postings | P1 |
+| P2-01 | Horizontal scale: consistent hashing of accountId to server | P2 |
+| P2-02 | Dead-letter path for Chronicle Queue append failures | P2 |
+| P2-03 | Multi-threaded drainer for catch-up under sustained load | P2 |
+| P3-01 | mTLS on all NATS connections | P3 |
+| P3-02 | OAuth2 / API key auth on client HTTP endpoints | P3 |
+| P3-03 | Least-privilege CockroachDB user; remove empty password default | P3 |
+| P4-01 | Prometheus alerting rules (queue lag, drainer failures, corruption) | P4 |
+| P4-02 | Correlation ID in SLF4J MDC and NATS message headers | P4 |
+| P4-03 | Split liveness / readiness probes; custom NATS + Chronicle readiness | P4 |
+| P5-01 | Rate limiting per accountId before Disruptor ring publish | P5 |
+| P5-02 | CockroachDB transient error retry (40001 + backoff) in drainer | P5 |
 
 ---
 
