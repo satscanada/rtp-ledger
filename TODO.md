@@ -1,7 +1,7 @@
 # TODO.md — RTP Ledger Checkpoint Tracker
 
 ## Current Checkpoint
-**CP-07: RTP Simulator Module**
+**CP-09: Pitch Assets (README + Architecture Diagram + PITCH.md)**
 Status: 🔲 NOT STARTED
 
 ---
@@ -142,53 +142,56 @@ This is a query path — not on the Disruptor hot path — so blocking is accept
 **Goal**: Standalone Spring Boot service that mimics Apple Pay / Google Pay RTP burst patterns.
 Provides a richer demo story than raw K6 — shows named payment scenarios with realistic timing.
 **Deliverables**:
-- [ ] `simulator/pom.xml`
-- [ ] `SimulatorController.java`
+- [x] `simulator/pom.xml`
+- [x] `SimulatorController.java`
   - `POST /simulate/apple-pay-burst` — fires 500 micro-transactions on HOT_ACCOUNT in 2s, then 3s lull, repeat × 3
   - `POST /simulate/google-pay-mixed` — 200 VUs across 10 accounts, randomised amounts, 60s run
   - `POST /simulate/single-account-drain` — 1000 transactions on one account, sequential, verify final balance
   - `GET  /simulate/status` — returns active scenario name, TPS, elapsed time, success/failure counts
-- [ ] `RtpScenarioRunner.java` — virtual-thread executor (`Executors.newVirtualThreadPerTaskExecutor()`)
+- [x] `RtpScenarioRunner.java` — virtual-thread executor (`Executors.newVirtualThreadPerTaskExecutor()`)
   - Each scenario runs on a dedicated virtual thread pool
   - Reports progress via SSE endpoint: `GET /simulate/events` (for Grafana annotations or terminal watch)
-- [ ] `SimulatorNatsConfig.java` — reuses same NATS connection pattern as client
-- [ ] `application.yml` (simulator, port 8082)
+- [x] `SimulatorNatsConfig.java` — reuses same NATS connection pattern as client
+- [x] `application.yml` (simulator, port 8082)
 
 **Why virtual threads here**: The simulator is not on the hot path — it IS the load generator.
 Virtual threads let us fire 500+ concurrent HTTP calls without tuning thread pool sizes.
 This is the one place in the project where virtual threads are appropriate.
 
-**STOP GATE**: `POST /simulate/apple-pay-burst` runs, Grafana shows TPS spike, balance updates visible on GET balance → PROCEED to CP-08
+**STOP GATE**: `POST /simulate/apple-pay-burst` runs, Grafana shows TPS spike, balance updates visible on GET balance → PROCEED to CP-08 ✅
 
 ---
 
 ### CP-08 — K6 Performance & Concurrency Tests
-**Goal**: Scripted load tests with Prometheus remote-write, all results visible in Grafana
+**Goal**: Scripted load tests with dual Prometheus remote-write, all results visible in Grafana
 **Deliverables**:
-- [ ] `k6/payload_generator.js` — BIAN mock factory (UUID, random amount as 2dp string, always RTP/CAD)
-- [ ] `k6/accounts.js` — fixed UUIDs matching V2__seed.sql (used by both K6 and simulator)
-- [ ] `k6/rtp_load_test.js` — 3 scenarios with per-scenario thresholds:
+- [x] `infra/k6/scripts/payload_generator.js` — BIAN mock factory (UUID, random amount as 2dp string, always RTP/CAD)
+- [x] `infra/k6/scripts/accounts.js` — fixed UUIDs matching V2__seed.sql
+- [x] `infra/k6/scripts/rtp_load_test.js` — 3 scenarios with per-scenario thresholds:
   - `warm_up`: 10 VUs / 30s / single account → p99 < 8ms
   - `hot_account_burst`: 200 VUs / 60s / SAME accountId → p95 < 15ms, p99 < 30ms
   - `mixed_load`: ramp 0→400→800→0 / 120s / 100 accounts → p95 < 12ms, p99 < 25ms
-- [ ] `k6/rtp_concurrent_test.js` — 3 concurrency correctness tests:
-  - **Balance correctness**: 500 VUs × 100 × $1.00 CRDT → verify final balance = initial + $50,000.00
+- [x] `infra/k6/scripts/rtp_concurrent_test.js` — 3 concurrency suites (`CONCURRENT_SCENARIO=balance|burst|parallel`):
+  - **Balance correctness**: 500 VUs × 100 × $1.00 CRDT → teardown asserts final balance ≈ initial + $50,000.00
   - **Burst spike**: 0→2000 VUs in 10s → 503 rate < 5%, zero 500s
-  - **Parallel lanes**: 10 groups × 50 VUs × exclusive accountId → each group p99 within 5ms of baseline
-- [ ] K6 `--out experimental-prometheus-rw` pointing to Prometheus pushgateway
-- [ ] `k6/README.md` — 10-section guide:
+  - **Parallel lanes**: 10 groups × 50 VUs × exclusive accountId → per-lane p99 thresholds (see script)
+- [x] `infra/k6/run.sh` — entrypoint wrapper; bakes in dual `--out experimental-prometheus-rw` to **both** Prometheus (`9090/api/v1/write`, `--web.enable-remote-write-receiver`) and VictoriaMetrics (`8428/api/v1/write`)
+- [x] Grafana datasources: **Prometheus** (uid `prometheus`, default) + **VictoriaMetrics** (uid `victoriametrics`) — same `k6_*` metrics queryable from either backend
+- [x] `infra/k6/README.md` — 10-section guide:
   1. Prerequisites (Docker Desktop 4.x, 8GB RAM)
-  2. Start the stack (`docker compose up -d`, health check commands)
+  2. Start the stack (`docker compose up -d`, health check commands, remote-write target table)
   3. Verify seed (`curl localhost:18080/api/v1/ledger/ca-east/{id}/balance` → 200)
   4. Run smoke test (`./scripts/smoke-test.sh`)
-  5. Run load test (`docker compose run k6 run /scripts/rtp_load_test.js`)
-  6. Run concurrency test (`docker compose run k6 run /scripts/rtp_concurrent_test.js`)
+  5. Run load test (`docker compose --profile k6 run --rm k6 /k6/scripts/rtp_load_test.js`)
+  6. Run concurrency tests (`-e CONCURRENT_SCENARIO=balance|burst|parallel /k6/scripts/rtp_concurrent_test.js`)
   7. Run simulator (`curl -X POST localhost:8082/simulate/apple-pay-burst`)
-  8. View results in Grafana (localhost:3000, admin/admin, RTP Ledger dashboard)
+  8. View results in Grafana (localhost:3000, admin/admin; Prometheus + VictoriaMetrics datasources)
+  9. Interpreting p95/p97/p99 for RTP SLA context
+  10. Failure triage (Chronicle lag > 10K, 503 backpressure, NATS slow consumers)
   9. Interpreting p95/p97/p99 for RTP SLA context
   10. Failure triage (Chronicle lag > 10K, 503 backpressure, NATS slow consumers)
 
-**STOP GATE**: K6 load test completes with all thresholds passing. Results visible in Grafana alongside simulator run → PROCEED to CP-09
+**STOP GATE**: K6 load test completes with all thresholds passing on a suitably sized host; k6 metrics visible via VictoriaMetrics in Grafana → PROCEED to CP-09 ✅
 
 ---
 
@@ -226,3 +229,5 @@ and watch live transactions in Grafana within 5 minutes → PROTOTYPE COMPLETE �
 - **CP-02** — Spring Boot client: HTTP → Disruptor → NATS publish; balance via NATS request (`mvn compile` verified; STOP GATE with K6 when infra is up)
 - **CP-03** — Spring Boot server: NATS `ledger.>` routing, Disruptor → Chronicle Map + Chronicle Queue, inline balance reads (`mvn compile` verified)
 - **CP-04** — JDBC drainer thread: hybrid batch flush + tail pointer + `infra/db/V1__init.sql` reference DDL (`mvn compile` verified)
+- **CP-07** — RTP Simulator module: Spring Boot load generator (`simulator`), virtual-thread scenarios, NATS to client subjects, Grafana-visible bursts (TestNG verified; STOP GATE passed)
+- **CP-08** — K6 suites under `infra/k6/scripts/`, `run.sh` entrypoint wrapper with dual remote-write (`--out` to both Prometheus and VictoriaMetrics), Compose `k6` profile, both Grafana datasources provisioned

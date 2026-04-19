@@ -15,7 +15,7 @@ Project: rtp-ledger
 Read: CLAUDE.md, TODO.md, then the specific module file in .github/instructions/
 I am continuing development. Do not suggest architectural changes without a STOP GATE review.
 Use Spring Boot 3.2 + Lombok conventions for implementation (constructor injection, minimal boilerplate).
-Current checkpoint: [FILL IN from TODO.md]
+Current checkpoint: CP-09 Pitch Assets (NOT STARTED — see TODO.md)
 ```
 
 ## What Each File Tells the AI

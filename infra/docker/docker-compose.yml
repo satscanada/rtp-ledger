@@ -9,6 +9,7 @@ volumes:
   chronicle_map:
   chronicle_queue:
   grafana_data:
+  victoria_metrics_data:
 
 services:
   nats:
@@ -91,11 +92,27 @@ services:
     container_name: rtp-prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--web.enable-remote-write-receiver"
     ports:
       # Host 9091 if 9090 is already taken (e.g. another stack); Grafana uses http://prometheus:9090 inside the network.
       - "9091:9090"
     volumes:
       - ../prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks: [rtp]
+    restart: unless-stopped
+
+  # Long-term metrics store and reference for VictoriaMetrics evaluation alongside Prometheus.
+  # k6 dual-writes to both via two --out flags; Grafana datasource uid: victoriametrics.
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.102.0
+    container_name: rtp-victoriametrics
+    command:
+      - "--storageDataPath=/storage"
+      - "--httpListenAddr=:8428"
+    ports:
+      - "8428:8428"
+    volumes:
+      - victoria_metrics_data:/storage
     networks: [rtp]
     restart: unless-stopped
 
@@ -206,3 +223,21 @@ services:
       - rtp-client
     networks: [rtp]
     restart: unless-stopped
+
+  # On-demand load generator — not started by default (`docker compose up`).
+  # Usage: docker compose --profile k6 run --rm k6 /k6/scripts/rtp_load_test.js
+  # Dual remote-write (baked into run.sh entrypoint): Prometheus + VictoriaMetrics.
+  k6:
+    image: grafana/k6:1.7.1
+    container_name: rtp-k6
+    profiles: ["k6"]
+    entrypoint: ["/bin/sh", "/k6/run.sh"]
+    volumes:
+      - ../k6:/k6:ro
+    environment:
+      BASE_URL: http://rtp-client:8080
+    depends_on:
+      - rtp-client
+      - prometheus
+      - victoriametrics
+    networks: [rtp]
