@@ -178,7 +178,7 @@ public class LedgerEventHandler implements EventHandler<LedgerServerEvent> {
                     correlationId,
                     null,
                     null,
-                    FlowTraceStage.SERVER_NATS_REPLY_FAILED,
+                    FlowTraceStage.SERVER_NATS_REPLY_OK,
                     "FAILED",
                     OffsetDateTime.now().toString(),
                     null,

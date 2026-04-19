@@ -26,7 +26,7 @@ public class RtpClientProperties {
         private String servers = "nats://localhost:4222";
         private int connectionTimeoutMs = 5000;
         private String subjectPrefix = "ledger";
-        private String traceSubject = "ledger.trace.v1";
+        private String traceSubject = "rtp.trace.v1";
         private int balanceRequestTimeoutMs = 500;
     }
 

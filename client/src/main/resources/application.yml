@@ -14,7 +14,7 @@ rtp:
       servers: nats://localhost:4222
       connection-timeout-ms: 5000
       subject-prefix: ledger
-      trace-subject: ledger.trace.v1
+      trace-subject: rtp.trace.v1
       balance-request-timeout-ms: 500
     trace:
       max-correlations: 5000

@@ -122,7 +122,7 @@ curl -fsS http://localhost:8082/simulate/status
 
 A metadata-only trace stream now captures stage-by-stage progression for each `correlationId`.
 
-- **Trace subject**: `ledger.trace.v1`
+- **Trace subject**: `rtp.trace.v1`
 - **Timeline API**: `GET /api/v1/ledger/trace/{correlationId}`
 - **Recent API**: `GET /api/v1/ledger/trace/recent`
 - **Grafana panels**: RTP Ledger dashboard, **Row 4 — End-to-end flow trace**

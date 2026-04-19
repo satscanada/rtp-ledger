@@ -3,7 +3,6 @@ package com.rtpledger.server.nats;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lmax.disruptor.RingBuffer;
 import com.rtpledger.server.chronicle.ChronicleBalanceEngine;
-import com.rtpledger.server.config.RtpServerProperties;
 import com.rtpledger.server.disruptor.LedgerServerEvent;
 import com.rtpledger.shared.message.FlowTraceEvent;
 import com.rtpledger.shared.message.FlowTraceStage;
@@ -29,7 +28,6 @@ public class NatsSubscriber {
     private final RingBuffer<LedgerServerEvent> ledgerRingBuffer;
     private final ChronicleBalanceEngine balanceEngine;
     private final FlowTracePublisher flowTracePublisher;
-    private final RtpServerProperties properties;
 
     @PostConstruct
     public void subscribe() {
@@ -40,9 +38,6 @@ public class NatsSubscriber {
 
     private void onLedgerMessage(Message msg) {
         String subject = msg.getSubject();
-        if (subject.equals(properties.getNats().getTraceSubject())) {
-            return;
-        }
         String[] parts = subject.split("\\.");
         if (parts.length == 4 && "balance".equals(parts[1])) {
             onBalanceMessage(msg, parts);

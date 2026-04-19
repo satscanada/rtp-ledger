@@ -37,7 +37,7 @@ Queue drainer thread (background)   →  JDBC batch to CockroachDB
 
 ### Flow visualization path (metadata-only)
 
-To visualize transaction movement without exposing full payloads, the system emits metadata events on `ledger.trace.v1`.
+To visualize transaction movement without exposing full payloads, the system emits metadata events on `rtp.trace.v1`.
 
 - **Client emits**: `CLIENT_HTTP_ACCEPTED|REJECTED`, `CLIENT_RING_PUBLISH_OK|REJECTED`, `CLIENT_NATS_PUBLISH_OK|FAILED`
 - **Server emits**: `SERVER_NATS_RECEIVED`, `SERVER_RING_ENQUEUED|REJECTED`, `SERVER_BALANCE_COMPUTE_OK|FAILED`, `SERVER_QUEUE_APPEND_OK|FAILED`, `SERVER_NATS_REPLY_OK|FAILED`
@@ -48,7 +48,7 @@ The client has a trace subscriber + bounded in-memory store and exposes:
 - `GET /api/v1/ledger/trace/{correlationId}` — timeline for one transaction
 - `GET /api/v1/ledger/trace/recent` — most recent correlations and latest stage
 
-Important guardrail: the server subscriber ignores `ledger.trace.v1` to avoid treating trace traffic as transaction traffic.
+The subject `rtp.trace.v1` is intentionally outside the `ledger.>` wildcard, so the server subscriber never receives trace messages and no filtering is required.
 
 ---
 
