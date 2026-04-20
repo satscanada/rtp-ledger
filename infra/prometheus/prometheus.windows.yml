@@ -1,0 +1,34 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: rtp-client
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["127.0.0.1:18080"]
+        labels: { service: "rtp-client" }
+
+  - job_name: rtp-server
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["127.0.0.1:8081"]
+        labels: { service: "rtp-server" }
+
+  - job_name: rtp-simulator
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["127.0.0.1:8082"]
+        labels: { service: "rtp-simulator" }
+
+  - job_name: nats
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["127.0.0.1:7777"]
+        labels: { service: "nats" }
+
+  - job_name: cockroachdb
+    metrics_path: /_status/vars
+    static_configs:
+      - targets: ["127.0.0.1:28080"]
+        labels: { service: "cockroachdb" }
